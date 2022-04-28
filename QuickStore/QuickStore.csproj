@@ -4,4 +4,7 @@
   </PropertyGroup>
   <Import Project="$(SolutionDir)\solution_private.targets" />
   <Import Project="$(SolutionDir)\solution.targets" />
+  <ItemGroup>
+    <Compile Include="..\AedenthornUtils\AedenthornUtils.cs" Link="AedenthornUtils.cs" />
+  </ItemGroup>
 </Project>
