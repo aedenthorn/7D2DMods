@@ -35,16 +35,15 @@ namespace RemoteStorageAccess
         {
             context = this;
             mod = modInstance;
-            Harmony harmony = new Harmony(GetType().ToString());
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
             LoadConfig();
 
             windowRect = new Rect(config.windowPositionX, config.windowPositionY, config.buttonWidth + config.buttonHeight + 40, config.windowHeight);
-
-
             GameObject go = new GameObject("RemoteStorageGUI");
             Object.DontDestroyOnLoad(go);
             go.AddComponent<RemoteStorageGUI>();
+
+            Harmony harmony = new Harmony(GetType().ToString());
+            harmony.PatchAll(Assembly.GetExecutingAssembly());
 
         }
 
@@ -94,14 +93,13 @@ namespace RemoteStorageAccess
         static class GameManager_Update_Patch
         {
 
-            static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null)
+                if (!config.modEnabled || ___m_World?.GetPrimaryPlayer() == null)
                     return;
-
                 if (nameDictPath is null)
                 {
-                    nameDictPath = Path.Combine(AedenthornUtils.GetAssetPath(context, true), GameManager.Instance.World.Guid + ".json");
+                    nameDictPath = Path.Combine(AedenthornUtils.GetAssetPath(context, true), ___m_World.Guid + ".json");
                     ReloadStorages();
                 }
 
@@ -128,7 +126,9 @@ namespace RemoteStorageAccess
                         ReloadStorages();
                         if (sortedStorageList.Count == 0)
                             return;
-                        currentStorage = sortedStorageList[0];
+                        int i = sortedStorageList.IndexOf(currentStorage);
+                        if (i < 0 || i >= sortedStorageList.Count)
+                            currentStorage = sortedStorageList[0];
                         OpenStorage();
                     }
                 }
@@ -186,6 +186,7 @@ namespace RemoteStorageAccess
             }
 
         }
+
         [HarmonyPatch(typeof(XUiC_LootWindowGroup), nameof(XUiC_LootWindowGroup.SetTileEntityChest))]
         static class XUiC_LootWindowGroup_SetTileEntityChest_Patch
         {
@@ -299,9 +300,17 @@ namespace RemoteStorageAccess
             Dbgl($"Got {sortedStorageList.Count} storages");
             var pos = world.GetPrimaryPlayer().position;
             sortedStorageList.Sort(delegate (Vector3i a, Vector3i b) { 
-                if(nameDict[ToXYZ(a)] != "" || nameDict[ToXYZ(b)] != "")
+                if(nameDict[ToXYZ(a)] != "" && nameDict[ToXYZ(b)] != "")
                 {
                     return nameDict[ToXYZ(a)].CompareTo(nameDict[ToXYZ(b)]);
+                }
+                else if(nameDict[ToXYZ(a)] != "")
+                {
+                    return -1;
+                }
+                else if(nameDict[ToXYZ(b)] != "")
+                {
+                    return 1;
                 }
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });

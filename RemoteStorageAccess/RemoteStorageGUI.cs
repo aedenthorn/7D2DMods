@@ -57,7 +57,7 @@ namespace RemoteStorageAccess
                 else
                 {
                     var color = GUI.backgroundColor;
-                    if (Main.sortedStorageList.IndexOf(Main.currentStorage) == i && GameManager.Instance.World.)
+                    if (Main.sortedStorageList.IndexOf(Main.currentStorage) == i && GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
                     {
                         GUI.backgroundColor = new Color(config.currentColorR, config.currentColorG, config.currentColorB, config.currentColorA);
                     }
