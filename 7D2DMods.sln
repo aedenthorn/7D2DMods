@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RemoteStorageAccess", "Remo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuickStore", "QuickStore\QuickStore.csproj", "{B628436F-DFE2-454C-9610-BC52FC93E05B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CraftFromContainers", "CraftFromContainers\CraftFromContainers.csproj", "{55BF4D52-BC16-4876-936F-A1C97C47AE8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{B628436F-DFE2-454C-9610-BC52FC93E05B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B628436F-DFE2-454C-9610-BC52FC93E05B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B628436F-DFE2-454C-9610-BC52FC93E05B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
