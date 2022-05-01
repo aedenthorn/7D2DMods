@@ -248,6 +248,15 @@ namespace RemoteStorageAccess
                 return codes.AsEnumerable();
             }
         }
+        
+        [HarmonyPatch(typeof(UICursor), "Update")]
+        static class UICursor_Update_Patch
+        {
+            static bool Prefix(UICursor __instance)
+            {
+                return !config.modEnabled || __instance.uiCamera != null;
+            }
+        }
 
         private static string GetStorageNameForTranspiler(string input, TileEntityLootContainer te)
         {

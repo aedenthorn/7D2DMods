@@ -100,17 +100,21 @@ namespace QuickStore
                 {
                     if (Array.Exists(storageDict[v].GetItems(), e => e.itemValue.type == items[i].itemValue.type))
                     {
-                        if (storageDict[v].TryStackItem(0, items[i]) && items[i].count == 0)
-                        {
-                            count++;
-                            break;
-                        }
-                        if (storageDict[v].AddItem(items[i]))
+                        var had = items[i].Clone();
+                        if ((storageDict[v].TryStackItem(0, items[i]) && items[i].count == 0) || storageDict[v].AddItem(items[i]))
                         {
                             items[i].Clear();
+                            storageDict[v].SetModified();
                             count++;
-                            break;
                         }
+                        if (had.count > items[i].count)
+                        {
+                            had.count -= items[i].count;
+                            storageDict[v].SetModified();
+                            ((XUiC_CollectedItemList)AccessTools.Field(typeof(XUiM_PlayerInventory), "sideBarItemInfo").GetValue(world.GetPrimaryPlayer().PlayerUI.xui.PlayerInventory)).RemoveItemStack(had);
+                        }
+                        if (items[i].IsEmpty())
+                            break;
                     }
                 }
             }

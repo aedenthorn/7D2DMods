@@ -232,6 +232,7 @@ namespace CraftFromContainers
                         else
                             items[j].count -= toRem;
 
+                        kvp.Value.SetModified();
                         if (numLeft <= 0)
                             return;
                     }
@@ -241,6 +242,7 @@ namespace CraftFromContainers
 
         private static void ReloadStorages()
         {
+            storageDict.Clear();
             for (int i = 0; i < GameManager.Instance.World.ChunkClusters.Count; i++)
             {
                 var cc = GameManager.Instance.World.ChunkClusters[i];
