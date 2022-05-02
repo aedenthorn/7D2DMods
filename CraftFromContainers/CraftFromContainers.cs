@@ -43,7 +43,7 @@ namespace CraftFromContainers
         public static void Dbgl(object str, bool prefix = true)
         {
             if (config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value : "") + str);
+                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
         }
 
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.HasItems))]
@@ -87,7 +87,7 @@ namespace CraftFromContainers
                         var ciNew = new CodeInstruction(OpCodes.Ldarg_1);
                         ci.MoveLabelsTo(ciNew);
                         Dbgl("Adding method to remove from storages");
-                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemaining))));
+                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForCraft))));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_1));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_0));
                         codes.Insert(i + 3, ciNew);
@@ -131,8 +131,8 @@ namespace CraftFromContainers
                 {
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
                     {
-                        Dbgl("Adding method to add item countss from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStoragesCountEntry))));
+                        Dbgl("Adding method to add item counts from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountEntry))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
                     }
                 }
@@ -166,11 +166,56 @@ namespace CraftFromContainers
             }
         }
         
-        private static int GetAllStoragesCountEntry(int count, XUiC_IngredientEntry entry)
+        [HarmonyPatch(typeof(ItemActionRepair), "CanRemoveRequiredResource")]
+        static class ItemActionRepair_CanRemoveRequiredResource_Patch
         {
-            return GetAllStoragesCountItem(count, entry.Ingredient.itemValue);
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling ItemActionRepair.CanRemoveRequiredResource");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount)))
+                    {
+                        Dbgl("Adding method to count items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem))));
+                        codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
         }
-        private static int GetAllStoragesCountItem(int count, ItemValue item)
+        
+        [HarmonyPatch(typeof(ItemActionRepair), "RemoveRequiredResource")]
+        static class ItemActionRepair_RemoveRequiredResource_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling ItemActionRepair.RemoveRequiredResource");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
+                    {
+                        Dbgl("Adding method to remove items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForRepair))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        private static int AddAllStoragesCountEntry(int count, XUiC_IngredientEntry entry)
+        {
+            return AddAllStoragesCountItem(count, entry.Ingredient.itemValue);
+        }
+        private static int AddAllStoragesCountItem(int count, ItemValue item)
         {
             ReloadStorages();
 
@@ -236,7 +281,7 @@ namespace CraftFromContainers
             return numLeft;
         }
         
-        private static void RemoveRemaining(IList<ItemStack> _itemStacks, int i, int numLeft)
+        private static void RemoveRemainingForCraft(IList<ItemStack> _itemStacks, int i, int numLeft)
         {
             ReloadStorages();
 
@@ -263,6 +308,46 @@ namespace CraftFromContainers
                     }
                 }
             }
+        }
+        
+        private static int RemoveRemainingForRepair(int numRemoved, ItemActionRepair action, ItemValue itemValue)
+        {
+            if (!config.modEnabled)
+                return numRemoved;
+            object upgradeInfo = AccessTools.Field(typeof(ItemActionRepair), "currentUpgradeInfo").GetValue(action);
+            int totalToRemove = ((int)AccessTools.Field(upgradeInfo.GetType(), "ItemCount").GetValue(upgradeInfo));
+
+            if (totalToRemove <= numRemoved)
+                return numRemoved;
+
+            var numLeft = totalToRemove - numRemoved;
+
+            ReloadStorages();
+
+            if (storageDict.Count == 0)
+                return numRemoved;
+
+            foreach (var kvp in storageDict)
+            {
+                var items = kvp.Value.GetItems();
+                for (int j = 0; j < items.Length; j++)
+                {
+                    if (items[j].itemValue.type == itemValue.type)
+                    {
+                        int toRem = Math.Min(numLeft, items[j].count);
+                        numLeft -= toRem;
+                        if (items[j].count <= toRem)
+                            items[j].Clear();
+                        else
+                            items[j].count -= toRem;
+
+                        kvp.Value.SetModified();
+                        if (numLeft <= 0)
+                            return totalToRemove;
+                    }
+                }
+            }
+            return totalToRemove - numLeft;
         }
 
         private static void ReloadStorages()
