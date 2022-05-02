@@ -104,9 +104,9 @@ namespace SpawnTrader
                     }
                     else
                     {
-                        SpawnTrader(traderNames.IndexOf(config.traderToSpawn));
+                        EntityTrader entity = (EntityTrader)EntityFactory.CreateEntity(EntityClass.FromString(config.traderToSpawn), GameManager.Instance.World.GetPrimaryPlayer().position + GameManager.Instance.World.GetPrimaryPlayer().GetForwardVector(), GameManager.Instance.World.GetPrimaryPlayer().rotation + new Vector3(0, 180, 0));
+                        GameManager.Instance.World.SpawnEntityInWorld(entity);
                     }
-
                 }
                 else if (AedenthornUtils.CheckKeyDown(config.nextTraderKey))
                 {
@@ -168,12 +168,6 @@ namespace SpawnTrader
                         SaveConfig();
                     }
                 }
-            }
-
-            private static void SpawnTrader(int index)
-            {
-                EntityTrader entity = (EntityTrader)EntityFactory.CreateEntity(EntityClass.FromString(traderNames[index]), GameManager.Instance.World.GetPrimaryPlayer().position + GameManager.Instance.World.GetPrimaryPlayer().GetForwardVector(), GameManager.Instance.World.GetPrimaryPlayer().rotation + new Vector3(0, 180, 0));
-                GameManager.Instance.World.SpawnEntityInWorld(entity);
             }
 
             private static EntityTrader GetTargetedTrader(EntityPlayerLocal entityPlayerLocal)
