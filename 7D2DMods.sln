@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuickStore", "QuickStore\Qu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CraftFromContainers", "CraftFromContainers\CraftFromContainers.csproj", "{55BF4D52-BC16-4876-936F-A1C97C47AE8D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MapTeleport", "MapTeleport\MapTeleport.csproj", "{DDB21819-7723-4F9A-A664-4B0DC2957BC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

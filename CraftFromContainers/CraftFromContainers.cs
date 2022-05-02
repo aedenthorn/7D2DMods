@@ -1,6 +1,9 @@
 ﻿using HarmonyLib;
+using Newtonsoft.Json;
+using Platform;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -13,18 +16,36 @@ namespace CraftFromContainers
     {
         private static CraftFromContainers context;
         private static Mod mod;
-        private static Dictionary<Vector3i, TileEntityLootContainer> storageDict = new Dictionary<Vector3i, TileEntityLootContainer>();
+        private static Dictionary<Vector3i, TileEntitySecureLootContainer> storageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
+        public static ModConfig config;
         public void InitMod(Mod modInstance)
         {
+            LoadConfig();
+
             context = this;
             mod = modInstance;
             Harmony harmony = new Harmony(GetType().ToString());
             harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
+        public void LoadConfig()
+        {
+            var path = Path.Combine(AedenthornUtils.GetAssetPath(this, true), "config.json");
+            if (!File.Exists(path))
+            {
+                config = new ModConfig();
+            }
+            else
+            {
+                config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
+            }
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
         public static void Dbgl(object str, bool prefix = true)
         {
-            Debug.Log((prefix ? mod.ModInfo.Name.Value : "") + str);
+            if (config.isDebug)
+                Debug.Log((prefix ? mod.ModInfo.Name.Value : "") + str);
         }
+
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.HasItems))]
         static class XUiM_PlayerInventory_HasItems_Patch
         {
@@ -111,7 +132,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
                     {
                         Dbgl("Adding method to add item countss from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStoragesCount))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStoragesCountEntry))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
                     }
                 }
@@ -144,8 +165,12 @@ namespace CraftFromContainers
                 return codes.AsEnumerable();
             }
         }
-
-        private static int GetAllStoragesCount(int count, XUiC_IngredientEntry entry)
+        
+        private static int GetAllStoragesCountEntry(int count, XUiC_IngredientEntry entry)
+        {
+            return GetAllStoragesCountItem(count, entry.Ingredient.itemValue);
+        }
+        private static int GetAllStoragesCountItem(int count, ItemValue item)
         {
             ReloadStorages();
 
@@ -156,7 +181,7 @@ namespace CraftFromContainers
                 var items = kvp.Value.GetItems();
                 for (int j = 0; j < items.Length; j++)
                 {
-                    if (items[j].itemValue.type == entry.Ingredient.itemValue.type)
+                    if (items[j].itemValue.type == item.type)
                     {
                         count += items[j].count;
                     }
@@ -243,6 +268,7 @@ namespace CraftFromContainers
         private static void ReloadStorages()
         {
             storageDict.Clear();
+            var pos = GameManager.Instance.World.GetPrimaryPlayer().position;
             for (int i = 0; i < GameManager.Instance.World.ChunkClusters.Count; i++)
             {
                 var cc = GameManager.Instance.World.ChunkClusters[i];
@@ -250,14 +276,13 @@ namespace CraftFromContainers
                 sync.EnterReadLock();
                 foreach (var c in cc.chunks.dict.Values)
                 {
-                    var cp = new Vector3i(c.X * 16, c.Y * 256, c.Z * 16);
                     DictionaryList<Vector3i, TileEntity> entities = (DictionaryList<Vector3i, TileEntity>)AccessTools.Field(typeof(Chunk), "tileEntities").GetValue(c);
                     foreach (var kvp in entities.dict)
                     {
-                        if (kvp.Value is TileEntityLootContainer && (kvp.Value as TileEntityLootContainer).bPlayerStorage && !(kvp.Value as TileEntityLootContainer).IsUserAccessing())
+                        var loc = kvp.Value.ToWorldPos();
+                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (config.range <= 0 || Vector3.Distance(pos, loc) < config.range) && !(kvp.Value as TileEntitySecureLootContainer).IsUserAccessing() && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                         {
-                            var loc = cp + kvp.Value.localChunkPos;
-                            storageDict[loc] = kvp.Value as TileEntityLootContainer;
+                            storageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
                         }
                     }
                 }
@@ -269,7 +294,7 @@ namespace CraftFromContainers
             int num = 0;
             for (int i = 0; i < slots.Length; i++)
             {
-                if ((!slots[i].itemValue.HasModSlots || !slots[i].itemValue.HasMods()) && slots[i].itemValue.type == _itemValue.type)
+                if (slots[i].itemValue.type == _itemValue.type)
                 {
                     num += slots[i].count;
                 }

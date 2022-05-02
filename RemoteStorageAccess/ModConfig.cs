@@ -6,63 +6,35 @@ namespace RemoteStorageAccess
 {
     public class ModConfig
     {
-        public ModConfig()
-        {
-            modEnabled = true;
-            isDebug = true;
-            pollInterval = 3;
+        public bool modEnabled = true;
+        public bool isDebug = true;
+        public float pollInterval = 3;
+        public float range = -1;
 
-            openCurrentKey = "[";
-            openNextKey = "right";
-            openPrevKey = "left";
-            openWindowKey = "]";
+        public string openCurrentKey = "[";
+        public string openNextKey = "right";
+        public string openPrevKey = "left";
+        public string openWindowKey = "]";
 
-            windowPositionX = 40;
-            windowPositionY = 40;
-            buttonWidth = 100;
-            buttonHeight = 30;
-            betweenSpace = 10;
-            windowHeight = Screen.height / 3;
-            windowBackgroundColorR = 255;
-            windowBackgroundColorG = 255;
-            windowBackgroundColorB = 255;
-            windowBackgroundColorA = 65;
-            currentColorR = 0;
-            currentColorG = 255;
-            currentColorB = 0;
-            currentColorA = 127;
+        public int windowPositionX = 40;
+        public int windowPositionY = 40;
+        public int buttonWidth = 100;
+        public int buttonHeight = 30;
+        public int betweenSpace = 10;
+        public float windowHeight = Screen.height / 3;
 
-            windowTitleText = "<b>Nearby Storage</b>";
-            fontSize = 14;
-            uiTitleText = "Nearby Storage";
-        }
+        public byte windowBackgroundColorR = 255;
+        public byte windowBackgroundColorG = 255;
+        public byte windowBackgroundColorB = 255;
+        public byte windowBackgroundColorA = 65;
+        public byte currentColorR = 0;
+        public byte currentColorG = 255;
+        public byte currentColorB = 0;
+        public byte currentColorA = 127;
 
-        public bool modEnabled;
-        public bool isDebug;
-        public int windowPositionX;
-        public int windowPositionY;
-        public int fontSize;
-        public int buttonWidth;
-        public int buttonHeight;
-        public int betweenSpace;
-        public float windowHeight;
-        public float pollInterval;
-        public byte windowBackgroundColorR;
-        public byte windowBackgroundColorG;
-        public byte windowBackgroundColorB;
-        public byte windowBackgroundColorA;
+        public string windowTitleText = "<b>Nearby Storage</b>";
+        public int fontSize = 14;
+        public string uiTitleText = "Nearby Storage";
 
-        public byte currentColorR;
-        public byte currentColorG;
-        public byte currentColorB;
-        public byte currentColorA;
-
-        public string windowTitleText;
-        public string uiTitleText;
-
-        public string openCurrentKey;
-        public string openNextKey;
-        public string openPrevKey;
-        public string openWindowKey;
     }
 }

@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
+using Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -53,17 +54,18 @@ namespace RemoteStorageAccess
             if (!File.Exists(path))
             {
                 config = new ModConfig();
-                File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
             else
             {
                 config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
             }
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
         }
 
         public static void Dbgl(object str, bool prefix = true)
         {
-            Debug.Log((prefix ? mod.ModInfo.Name.Value : "") + str);
+            if(config.isDebug)
+                Debug.Log((prefix ? mod.ModInfo.Name.Value : "") + str);
         }
 
         [HarmonyPatch(typeof(GameManager), "StartGame")]
@@ -249,15 +251,7 @@ namespace RemoteStorageAccess
             }
         }
         
-        [HarmonyPatch(typeof(UICursor), "Update")]
-        static class UICursor_Update_Patch
-        {
-            static bool Prefix(UICursor __instance)
-            {
-                return !config.modEnabled || __instance.uiCamera != null;
-            }
-        }
-
+        
         private static string GetStorageNameForTranspiler(string input, TileEntityLootContainer te)
         {
             if (!config.modEnabled || !nameDict.TryGetValue(ToXYZ(te.ToWorldPos()), out string name) || name == "")
@@ -280,6 +274,8 @@ namespace RemoteStorageAccess
                 return;
             Dbgl($"Loading storages, {world.ChunkClusters.Count} ccs");
 
+            var pos = world.GetPrimaryPlayer().position;
+
             sortedStorageList.Clear();
             storageDict.Clear();
             nameDict = File.Exists(nameDictPath) ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(nameDictPath)) : new Dictionary<string, string>();
@@ -293,12 +289,12 @@ namespace RemoteStorageAccess
                     DictionaryList<Vector3i, TileEntity> entities = (DictionaryList<Vector3i, TileEntity>)AccessTools.Field(typeof(Chunk), "tileEntities").GetValue(c);
                     foreach (var kvp in entities.dict)
                     {
-                        if (kvp.Value is TileEntityLootContainer && (kvp.Value as TileEntityLootContainer).bPlayerStorage)
+                        var loc = kvp.Value.ToWorldPos();
+                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (config.range <= 0 || Vector3.Distance(pos, loc) < config.range) && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                         {
-                            (kvp.Value as TileEntityLootContainer).bWasTouched = (kvp.Value as TileEntityLootContainer).bTouched;
-                            var loc = kvp.Value.ToWorldPos();
+                            (kvp.Value as TileEntitySecureLootContainer).bWasTouched = (kvp.Value as TileEntitySecureLootContainer).bTouched;
                             sortedStorageList.Add(loc);
-                            storageDict.Add(loc, new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntityLootContainer });
+                            storageDict.Add(loc, new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer });
                             if(!nameDict.ContainsKey(ToXYZ(loc)))
                                 nameDict.Add(ToXYZ(loc), "");
                         }
@@ -307,7 +303,6 @@ namespace RemoteStorageAccess
                 sync.ExitReadLock();
             }
             Dbgl($"Got {sortedStorageList.Count} storages");
-            var pos = world.GetPrimaryPlayer().position;
             sortedStorageList.Sort(delegate (Vector3i a, Vector3i b) { 
                 if(nameDict[ToXYZ(a)] != "" && nameDict[ToXYZ(b)] != "")
                 {

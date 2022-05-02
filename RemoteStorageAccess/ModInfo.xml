@@ -4,6 +4,6 @@
 		<Name value="RemoteStorageAccess" />
 		<Description value="Lets you access nearby containers remotely." />
 		<Author value="aedenthorn" />
-		<Version value="0.1.0" />
+		<Version value="0.2.0" />
 	</ModInfo>
 </xml>

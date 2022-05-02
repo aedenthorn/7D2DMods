@@ -4,6 +4,6 @@
 		<Name value="CraftFromContainers" />
 		<Description value="Lets you craft items using resources from nearby containers." />
 		<Author value="aedenthorn" />
-		<Version value="0.1.2" />
+		<Version value="0.2.0" />
 	</ModInfo>
 </xml>
