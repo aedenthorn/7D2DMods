@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MapTeleport", "MapTeleport\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnTrader", "SpawnTrader\SpawnTrader.csproj", "{909765E1-39D5-47C4-8BF0-079AEEDCFE29}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShowRemainingToClear", "ShowRemainingToClear\ShowRemainingToClear.csproj", "{40747578-7FA5-4A5C-8F61-2928664B6E34}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
