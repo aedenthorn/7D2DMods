@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
 using Platform;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using UnityEngine;
-using WorldGenerationEngineFinal;
 using Object = UnityEngine.Object;
 using Path = System.IO.Path;
 
@@ -20,7 +18,8 @@ namespace RemoteStorageAccess
 
 
         public static List<Vector3i> sortedStorageList = new List<Vector3i>();
-        public static Dictionary<Vector3i, StorageData> storageDict = new Dictionary<Vector3i, StorageData>();
+        public static Dictionary<Vector3i, StorageData> currentStorageDict = new Dictionary<Vector3i, StorageData>();
+        public static Dictionary<Vector3i, StorageData> knownStorageDict = new Dictionary<Vector3i, StorageData>();
         public static Vector3i currentStorage;
         public static Dictionary<string, string> nameDict = new Dictionary<string, string>();
         public static bool showingList;
@@ -74,6 +73,8 @@ namespace RemoteStorageAccess
             static void Prefix()
             {
                 nameDictPath = null;
+                knownStorageDict.Clear();
+
             }
         }
         [HarmonyPatch(typeof(GameManager), "lootContainerOpened")]
@@ -264,7 +265,7 @@ namespace RemoteStorageAccess
             if (sortedStorageList.Count > 0)
             {
                 GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
-                GameManager.Instance.TELockServer(storageDict[currentStorage].cluster, currentStorage, -1, GameManager.Instance.World.GetPrimaryPlayer().entityId, null);
+                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, -1, GameManager.Instance.World.GetPrimaryPlayer().entityId, null);
             }
         }
         public static void ReloadStorages()
@@ -276,8 +277,7 @@ namespace RemoteStorageAccess
 
             var pos = world.GetPrimaryPlayer().position;
 
-            sortedStorageList.Clear();
-            storageDict.Clear();
+            currentStorageDict.Clear();
             nameDict = File.Exists(nameDictPath) ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(nameDictPath)) : new Dictionary<string, string>();
             for(int i = 0; i < world.ChunkClusters.Count; i++)
             {
@@ -290,11 +290,12 @@ namespace RemoteStorageAccess
                     foreach (var kvp in entities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
-                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (config.range <= 0 || Vector3.Distance(pos, loc) < config.range) && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
+                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                         {
                             (kvp.Value as TileEntitySecureLootContainer).bWasTouched = (kvp.Value as TileEntitySecureLootContainer).bTouched;
-                            sortedStorageList.Add(loc);
-                            storageDict.Add(loc, new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer });
+                            knownStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer };
+                            if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                currentStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer };
                             if(!nameDict.ContainsKey(ToXYZ(loc)))
                                 nameDict.Add(ToXYZ(loc), "");
                         }
@@ -302,7 +303,8 @@ namespace RemoteStorageAccess
                 }
                 sync.ExitReadLock();
             }
-            Dbgl($"Got {sortedStorageList.Count} storages");
+            Dbgl($"Got {currentStorageDict.Count} storages");
+            sortedStorageList = new List<Vector3i>(currentStorageDict.Keys.ToArray());
             sortedStorageList.Sort(delegate (Vector3i a, Vector3i b) { 
                 if(nameDict[ToXYZ(a)] != "" && nameDict[ToXYZ(b)] != "")
                 {

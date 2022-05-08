@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnTrader", "SpawnTrader\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShowRemainingToClear", "ShowRemainingToClear\ShowRemainingToClear.csproj", "{40747578-7FA5-4A5C-8F61-2928664B6E34}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PickLockedDoors", "PickLockedDoors\PickLockedDoors.csproj", "{CC60AC8A-6CD2-42A1-A766-19EE1BC420EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{40747578-7FA5-4A5C-8F61-2928664B6E34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC60AC8A-6CD2-42A1-A766-19EE1BC420EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC60AC8A-6CD2-42A1-A766-19EE1BC420EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC60AC8A-6CD2-42A1-A766-19EE1BC420EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC60AC8A-6CD2-42A1-A766-19EE1BC420EB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

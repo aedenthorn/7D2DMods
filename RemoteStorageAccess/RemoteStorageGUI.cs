@@ -45,7 +45,7 @@ namespace RemoteStorageAccess
             {
                 GUILayout.BeginHorizontal();
                 var coords = Main.ToXYZ(Main.sortedStorageList[i]);
-                var naming = Main.storageDict[Main.sortedStorageList[i]].naming;
+                var naming = Main.currentStorageDict[Main.sortedStorageList[i]].naming;
                 if (naming)
                 {
                     Main.editing = true;
@@ -80,7 +80,7 @@ namespace RemoteStorageAccess
                     }))
                 {
                     naming = !naming;
-                    Main.storageDict[Main.sortedStorageList[i]].naming = naming;
+                    Main.currentStorageDict[Main.sortedStorageList[i]].naming = naming;
                     Main.Dbgl($"Pressed edit button {i}, naming {naming}");
                     if (!naming)
                     {

@@ -16,7 +16,8 @@ namespace CraftFromContainers
     {
         private static CraftFromContainers context;
         private static Mod mod;
-        private static Dictionary<Vector3i, TileEntitySecureLootContainer> storageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
+        private static Dictionary<Vector3i, TileEntitySecureLootContainer> knownStorageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
+        private static Dictionary<Vector3i, TileEntitySecureLootContainer> currentStorageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
         public static ModConfig config;
         public void InitMod(Mod modInstance)
         {
@@ -45,7 +46,15 @@ namespace CraftFromContainers
             if (config.isDebug)
                 Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
         }
+        [HarmonyPatch(typeof(GameManager), "StartGame")]
+        static class GameManager_StartGame_Patch
+        {
+            static void Prefix()
+            {
+                knownStorageDict.Clear();
 
+            }
+        }
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.HasItems))]
         static class XUiM_PlayerInventory_HasItems_Patch
         {
@@ -219,9 +228,9 @@ namespace CraftFromContainers
         {
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return count;
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 var items = kvp.Value.GetItems();
                 for (int j = 0; j < items.Length; j++)
@@ -239,12 +248,12 @@ namespace CraftFromContainers
         {
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return items;
 
             List<ItemStack> itemList = new List<ItemStack>();
             itemList.AddRange(items);
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 itemList.AddRange(kvp.Value.GetItems());
 
@@ -255,10 +264,10 @@ namespace CraftFromContainers
         {
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return;
 
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 items.AddRange(kvp.Value.GetItems());
             }
@@ -268,10 +277,10 @@ namespace CraftFromContainers
         {
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return numLeft;
 
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 var items = kvp.Value.GetItems();
                 numLeft -= GetItemCount(items, _itemStacks[i].itemValue);
@@ -285,10 +294,10 @@ namespace CraftFromContainers
         {
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return;
 
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 var items = kvp.Value.GetItems();
                 for (int j = 0; j < items.Length; j++)
@@ -324,10 +333,10 @@ namespace CraftFromContainers
 
             ReloadStorages();
 
-            if (storageDict.Count == 0)
+            if (currentStorageDict.Count == 0)
                 return numRemoved;
 
-            foreach (var kvp in storageDict)
+            foreach (var kvp in currentStorageDict)
             {
                 var items = kvp.Value.GetItems();
                 for (int j = 0; j < items.Length; j++)
@@ -352,7 +361,7 @@ namespace CraftFromContainers
 
         private static void ReloadStorages()
         {
-            storageDict.Clear();
+            currentStorageDict.Clear();
             var pos = GameManager.Instance.World.GetPrimaryPlayer().position;
             for (int i = 0; i < GameManager.Instance.World.ChunkClusters.Count; i++)
             {
@@ -365,9 +374,11 @@ namespace CraftFromContainers
                     foreach (var kvp in entities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
-                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (config.range <= 0 || Vector3.Distance(pos, loc) < config.range) && !(kvp.Value as TileEntitySecureLootContainer).IsUserAccessing() && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
+                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && !(kvp.Value as TileEntitySecureLootContainer).IsUserAccessing() && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                         {
-                            storageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
+                            knownStorageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
+                            if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                currentStorageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
                         }
                     }
                 }
