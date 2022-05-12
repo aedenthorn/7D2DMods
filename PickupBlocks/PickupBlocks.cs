@@ -82,17 +82,19 @@ namespace PickupBlocks
             AddTakeCommand(_world, _blockPos, temp);
             __result = temp.ToArray();
         }
-        public static bool OnBlockActivatedOne(int _indexInBlockActivationCommands, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player, BlockActivationCommand[] ___cmds)
+        public static bool OnBlockActivatedOne(Block __instance, int _indexInBlockActivationCommands, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            if (!config.modEnabled || _blockValue.ischild || ___cmds[_indexInBlockActivationCommands].text != "take")
+            var cmds = __instance.GetBlockActivationCommands(_world, _blockValue, _cIdx, _blockPos, _player);
+            if (!config.modEnabled || _blockValue.ischild || _indexInBlockActivationCommands >= cmds.Length || cmds[_indexInBlockActivationCommands].text != "take")
                 return true;
             TakeBlock(_world, _cIdx, _blockPos, _blockValue, _player);
             return false;
         }
         
-        public static bool OnBlockActivatedTwo(int _indexInBlockActivationCommands, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player, BlockActivationCommand[] ___cmds)
+        public static bool OnBlockActivatedTwo(Block __instance, int _indexInBlockActivationCommands, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            if (!config.modEnabled || _blockValue.ischild || ___cmds[_indexInBlockActivationCommands].text != "take")
+            var cmds = __instance.GetBlockActivationCommands(_world, _blockValue, _clrIdx, _blockPos, _player);
+            if (!config.modEnabled || _blockValue.ischild || _indexInBlockActivationCommands >= cmds.Length || cmds[_indexInBlockActivationCommands].text != "take")
                 return true;
             TakeBlock(_world, _clrIdx, _blockPos, _blockValue, _player);
             return false;
@@ -113,7 +115,11 @@ namespace PickupBlocks
             __instance.CanPickup = __state;
         }
 
-
+        public static void SaveConfig()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
         public void LoadConfig()
         {
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
@@ -152,6 +158,12 @@ namespace PickupBlocks
         private static void TakeBlock(WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
             Block block = _blockValue.Block;
+            TileEntityLootContainer tileEntityLootContainer = _world.GetTileEntity(_clrIdx, _blockPos) as TileEntityLootContainer;
+            if (tileEntityLootContainer != null && (!tileEntityLootContainer.IsEmpty() || !tileEntityLootContainer.bTouched))
+            {
+                GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
+                return;
+            }
             if (!_world.CanPickupBlockAt(_blockPos, _world.GetGameManager().GetPersistentLocalPlayer()))
             {
                 _player.PlayOneShot("keystone_impact_overlay", false);
@@ -171,6 +183,53 @@ namespace PickupBlocks
             QuestEventManager.Current.BlockPickedUp(block.GetBlockName(), _blockPos);
             QuestEventManager.Current.ItemAdded(itemStack);
             _world.GetGameManager().PickupBlockServer(_clrIdx, _blockPos, _blockValue, _player.entityId, null);
+        }
+
+        [HarmonyPatch(typeof(GameManager), "Update")]
+        static class GameManager_Update_Patch
+        {
+
+            static void Postfix(World ___m_World)
+            {
+                if (___m_World is null || ___m_World.GetPrimaryPlayer() is null)
+                    return;
+                if (AedenthornUtils.CheckKeyDown(config.ToggleModKey))
+                {
+                    Dbgl($"Pressed mod toggle key");
+                    GameManager.Instance.ClearTooltips(___m_World.GetPrimaryPlayer().PlayerUI.nguiWindowManager);
+                    if (!config.modEnabled)
+                    {
+                        if (config.RestrictBlocksToLandClaimArea)
+                        {
+                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionEnabledText);
+                        }
+                        else
+                        {
+                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionDisabledText);
+                        }
+                        config.modEnabled = true;
+                    }
+                    else if (config.AllowToggleLandClaimRestriction)
+                    {
+                        if (!config.RestrictBlocksToLandClaimArea)
+                        {
+                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText);
+                            config.RestrictBlocksToLandClaimArea = true;
+                            config.modEnabled = false;
+                        }
+                        else
+                        {
+                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText);
+                            config.RestrictBlocksToLandClaimArea = false;
+                        }
+                    }
+                    else 
+                    {
+                        config.modEnabled = false;
+                    }
+                    SaveConfig();
+                }
+            }
         }
     }
 }
