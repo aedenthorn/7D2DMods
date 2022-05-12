@@ -14,7 +14,7 @@ namespace PickLockedDoors
         private static PickLockedDoors context;
         private static Mod mod;
         public static ModConfig config;
-        public static float PickTimeLeft { get; private set; }
+        public static Dictionary<Vector3i, float> pickTimeDict = new Dictionary<Vector3i, float>();
         public void InitMod(Mod modInstance)
         {
             config = new ModConfig();
@@ -39,6 +39,14 @@ namespace PickLockedDoors
         {
             if (config.isDebug)
                 Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+        }
+        [HarmonyPatch(typeof(GameManager), "StartGame")]
+        static class GameManager_StartGame_Patch
+        {
+            static void Prefix()
+            {
+                pickTimeDict.Clear();
+            }
         }
         [HarmonyPatch(typeof(BlockDoorSecure), nameof(BlockDoorSecure.GetBlockActivationCommands))]
         static class BlockDoorSecure_GetBlockActivationCommands_Patch
@@ -90,7 +98,8 @@ namespace PickLockedDoors
                 {
                     lockPickTime = StringParsers.ParseFloat(timeString, 0, -1, NumberStyles.Any);
                 }
-                PickTimeLeft = lockPickTime; 
+                if(!pickTimeDict.ContainsKey(_blockPos))
+                    pickTimeDict[_blockPos] = lockPickTime; 
 
                 LocalPlayerUI playerUI = (_player as EntityPlayerLocal).PlayerUI;
                 ItemValue item = ItemClass.GetItem(lockPickItem, false);
@@ -109,7 +118,7 @@ namespace PickLockedDoors
                 if (_player.rand.RandomRange(1f) < EffectManager.GetValue(PassiveEffects.LockPickBreakChance, _player.inventory.holdingItemItemValue, lockPickBreakChance, _player, null, default(FastTags), true, true, true, true, 1, true))
                 {
                     float value = EffectManager.GetValue(PassiveEffects.LockPickTime, _player.inventory.holdingItemItemValue, lockPickTime, _player, null, default(FastTags), true, true, true, true, 1, true);
-                    float num = value - ((PickTimeLeft == -1f) ? (value - 1f) : (PickTimeLeft + 1f));
+                    float num = value - ((pickTimeDict[_blockPos] == -1f) ? (value - 1f) : (pickTimeDict[_blockPos] + 1f));
                     alternateTime = _player.rand.RandomRange(num + 1f, value - 1f);
                 }
                 timerEventData.Data = new object[]
@@ -123,7 +132,7 @@ namespace PickLockedDoors
                 timerEventData.Event += EventData_Event;
                 timerEventData.alternateTime = alternateTime;
                 timerEventData.AlternateEvent += EventData_CloseEvent;
-                childByType.SetTimer(EffectManager.GetValue(PassiveEffects.LockPickTime, _player.inventory.holdingItemItemValue, config.lockPickTime, _player, null, default(FastTags), true, true, true, true, 1, true), timerEventData, PickTimeLeft, "");
+                childByType.SetTimer(EffectManager.GetValue(PassiveEffects.LockPickTime, _player.inventory.holdingItemItemValue, config.lockPickTime, _player, null, default(FastTags), true, true, true, true, 1, true), timerEventData, pickTimeDict[_blockPos], "");
                 Manager.BroadcastPlayByLocalPlayer(_blockPos.ToVector3() + Vector3.one * 0.5f, "Misc/unlocking");
                 __result = true;
             }
@@ -180,7 +189,7 @@ namespace PickLockedDoors
                 {
                     lockPickTime = StringParsers.ParseFloat(timeString, 0, -1, NumberStyles.Any);
                 }
-                PickTimeLeft = Mathf.Max(lockPickTime * 0.25f, timerData.timeLeft);
+                pickTimeDict[blockPos] = Mathf.Max(lockPickTime * 0.25f, timerData.timeLeft);
                 ResetEventData(timerData);
             }
             private static void ResetEventData(TimerEventData timerData)

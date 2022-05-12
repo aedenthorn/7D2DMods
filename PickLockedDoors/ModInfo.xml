@@ -4,6 +4,6 @@
 		<Name value="PickLockedDoors" />
 		<Description value="Lets you unlock doors using lockpicks." />
 		<Author value="aedenthorn" />
-		<Version value="0.3.0" />
+		<Version value="0.2.0" />
 	</ModInfo>
 </xml>

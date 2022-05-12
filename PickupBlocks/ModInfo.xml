@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<ModInfo>
+		<Name value="PickupBlocks" />
+		<Description value="Lets you pick up all sorts of blocks." />
+		<Author value="aedenthorn" />
+		<Version value="0.1.0" />
+	</ModInfo>
+</xml>
