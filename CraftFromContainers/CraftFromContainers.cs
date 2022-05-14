@@ -180,8 +180,10 @@ namespace CraftFromContainers
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                Dbgl("Transpiling ItemActionRepair.CanRemoveRequiredResource");
                 var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionRepair.CanRemoveRequiredResource");
                 for (int i = 0; i < codes.Count; i++)
                 {
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount)))
@@ -202,8 +204,10 @@ namespace CraftFromContainers
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                Dbgl("Transpiling ItemActionRepair.RemoveRequiredResource");
                 var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionRepair.RemoveRequiredResource");
                 for (int i = 0; i < codes.Count; i++)
                 {
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
