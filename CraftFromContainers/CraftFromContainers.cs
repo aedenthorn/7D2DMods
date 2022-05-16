@@ -213,9 +213,57 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
                     {
                         Dbgl("Adding method to remove items from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForRepair))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForUpgrade))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(ItemActionRepair), "canRemoveRequiredItem")]
+        static class ItemActionRepair_canRemoveRequiredItem_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionRepair.canRemoveRequiredItem");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount)))
+                    {
+                        Dbgl("Adding method to count items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemStack))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_2));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(ItemActionRepair), "removeRequiredItem")]
+        static class ItemActionRepair_removeRequiredItem_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionRepair.removeRequiredItem");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
+                    {
+                        Dbgl("Adding method to remove items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForRepair))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_2));
                         break;
                     }
                 }
@@ -227,6 +275,10 @@ namespace CraftFromContainers
         private static int AddAllStoragesCountEntry(int count, XUiC_IngredientEntry entry)
         {
             return AddAllStoragesCountItem(count, entry.Ingredient.itemValue);
+        }
+        private static int AddAllStoragesCountItemStack(int count, ItemStack itemStack)
+        {
+            return AddAllStoragesCountItem(count, itemStack.itemValue);
         }
         private static int AddAllStoragesCountItem(int count, ItemValue item)
         {
@@ -323,7 +375,7 @@ namespace CraftFromContainers
             }
         }
         
-        private static int RemoveRemainingForRepair(int numRemoved, ItemActionRepair action, ItemValue itemValue)
+        private static int RemoveRemainingForUpgrade(int numRemoved, ItemActionRepair action, ItemValue itemValue)
         {
             if (!config.modEnabled)
                 return numRemoved;
@@ -346,6 +398,45 @@ namespace CraftFromContainers
                 for (int j = 0; j < items.Length; j++)
                 {
                     if (items[j].itemValue.type == itemValue.type)
+                    {
+                        int toRem = Math.Min(numLeft, items[j].count);
+                        numLeft -= toRem;
+                        if (items[j].count <= toRem)
+                            items[j].Clear();
+                        else
+                            items[j].count -= toRem;
+
+                        kvp.Value.SetModified();
+                        if (numLeft <= 0)
+                            return totalToRemove;
+                    }
+                }
+            }
+            return totalToRemove - numLeft;
+        }
+        
+        private static int RemoveRemainingForRepair(int numRemoved, ItemStack _itemStack)
+        {
+            if (!config.modEnabled)
+                return numRemoved;
+            int totalToRemove = _itemStack.count;
+
+            if (totalToRemove <= numRemoved)
+                return numRemoved;
+
+            var numLeft = totalToRemove - numRemoved;
+
+            ReloadStorages();
+
+            if (currentStorageDict.Count == 0)
+                return numRemoved;
+
+            foreach (var kvp in currentStorageDict)
+            {
+                var items = kvp.Value.GetItems();
+                for (int j = 0; j < items.Length; j++)
+                {
+                    if (items[j].itemValue.type == _itemStack.itemValue.type)
                     {
                         int toRem = Math.Min(numLeft, items[j].count);
                         numLeft -= toRem;
