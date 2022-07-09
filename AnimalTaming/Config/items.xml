@@ -1,0 +1,57 @@
+<configs>
+	<append xpath="/items">
+		<item name="Tranq Crossbow Bolt">
+			<property name="Tags" value="ammo,ranged,attAgility,perkArchery,perkPenetrator"/>
+			<property name="CustomIcon" value="ammoCrossbowBoltIron"/>
+			<property name="CustomIconTint" value="99ff99"/>
+			<property name="DisplayType" value="ammoArrowAP"/>
+			<property name="Meshfile" value="#Other/Items?Weapons/Ranged/Bows/Arrows/bolt_ironPrefab.prefab"/>
+			<property name="HoldType" value="45"/>
+			<property name="HandMeshfile" value="#Other/Items?Misc/sackPrefab.prefab"/>
+			<property name="DropMeshfile" value="#Other/Items?Misc/sack_droppedPrefab.prefab"/>
+			<property name="Material" value="Mmetal"/>
+			<property name="IsSticky" value="true"/>
+			<property name="StickyOffset" value=".13"/>
+			<property name="StickyColliderUp" value="2"/>
+			<property name="StickyColliderRadius" value=".05"/>
+			<property name="StickyColliderLength" value=".75"/>
+			<property name="Stacknumber" value="150"/> <!-- STK ammo low -->
+			<property name="EconomicValue" value="25"/>
+			<property name="EconomicBundleSize" value="5"/>
+			<property name="Group" value="Ammo/Weapons,Ammo,Ranged Weapons"/>
+			<property class="Action1">
+				<property name="Class" value="Projectile"/>
+				<property name="Explosion.ParticleIndex" value="0"/> <!-- no expl. -->
+				<property name="Gravity" value="-2.5"/>
+				<property name="FlyTime" value="0"/>
+				<property name="LifeTime" value="14"/>
+			</property>
+			<property class="Attributes">
+				<property name="GetQualityFromWeapon" value="true"/>
+			</property>
+			<effect_group name="ammoCrossbowBoltTranq" tiered="false"> <!-- ammoCrossbowBoltTranq -->
+				<passive_effect name="EntityDamage" operation="base_set" value="0" tags="perkArchery"/>
+				<passive_effect name="TargetArmor" operation="perc_add" value="-.2"/><display_value name="dTargetArmor" value="-.2"/>
+				<passive_effect name="BlockDamage" operation="base_set" value="0" tags="perkArchery"/>
+				<passive_effect name="DamageModifier" operation="perc_set" value=".1" tags="wood"/>
+				<passive_effect name="DamageModifier" operation="perc_set" value="0" tags="earth,metal,cloth"/>
+				<passive_effect name="ProjectileVelocity" operation="base_set" value="75" tags="perkArchery"/>
+			</effect_group>
+
+			<effect_group name="perkPenetrator" tiered="false">
+				<passive_effect name="TargetArmor" operation="perc_add" value="-.1" tags="perkArchery">
+					<requirement name="ProgressionLevel" progression_name="perkPenetrator" operation="Equals" value="1"/></passive_effect>
+				<passive_effect name="TargetArmor" operation="perc_add" value="-.15" tags="perkArchery">
+					<requirement name="ProgressionLevel" progression_name="perkPenetrator" operation="Equals" value="2"/></passive_effect>
+				<passive_effect name="TargetArmor" operation="perc_add" value="-.2" tags="perkArchery">
+					<requirement name="ProgressionLevel" progression_name="perkPenetrator" operation="Equals" value="3"/></passive_effect>
+				<passive_effect name="TargetArmor" operation="perc_add" value="-.3" tags="perkArchery">
+					<requirement name="ProgressionLevel" progression_name="perkPenetrator" operation="Equals" value="4"/></passive_effect>
+			</effect_group>
+		</item>
+	</append>
+
+  <append xpath="/items/item[@name='gunBowT1IronCrossbow']/property[@class='Action0']/property[@name='Magazine_items']/@value">,Tranq Crossbow Bolt</append>
+  <append xpath="/items/item[@name='gunBowT3CompoundCrossbow']/property[@class='Action0']/property[@name='Magazine_items']/@value">,Tranq Crossbow Bolt</append>
+
+</configs>

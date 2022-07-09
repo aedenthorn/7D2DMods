@@ -1,0 +1,8 @@
+<configs>
+	<append xpath="/recipes">
+		<recipe name="Tranq Crossbow Bolt" count="100"  craft_time="10">
+			<ingredient name="ammoCrossbowBoltIron" count="1"/>
+			<ingredient name="drugPainkillers" count="1"/>
+		</recipe>
+	</append>
+</configs>
