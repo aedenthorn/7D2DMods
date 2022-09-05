@@ -180,6 +180,10 @@ namespace PickupBlocks
                 GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("xuiInventoryFullForPickup"), string.Empty, "ui_denied", null);
                 return;
             }
+            Dbgl($"Can pickup? {block.CanPickup}");
+
+            block.CanPickup = true;
+            block.PickedUpItemValue = block.Properties.Params1[Block.PropCanPickup];
             QuestEventManager.Current.BlockPickedUp(block.GetBlockName(), _blockPos);
             QuestEventManager.Current.ItemAdded(itemStack);
             _world.GetGameManager().PickupBlockServer(_clrIdx, _blockPos, _blockValue, _player.entityId, null);
