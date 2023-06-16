@@ -44,7 +44,7 @@ namespace CraftFromContainers
         public static void Dbgl(object str, bool prefix = true)
         {
             if (config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+                Debug.Log((prefix ? mod.DisplayName + " " : "") + str);
         }
         [HarmonyPatch(typeof(GameManager), "StartGame")]
         static class GameManager_StartGame_Patch
@@ -53,6 +53,26 @@ namespace CraftFromContainers
             {
                 knownStorageDict.Clear();
 
+            }
+        }
+        [HarmonyPatch(typeof(ItemActionEntryCraft), nameof(ItemActionEntryCraft.OnActivated))]
+        static class ItemActionEntryCraft_OnActivated_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling ItemActionEntryCraft.OnActivated");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
+                    {
+                        Dbgl("Adding method to add items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacks2))));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
             }
         }
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.HasItems))]
@@ -84,6 +104,14 @@ namespace CraftFromContainers
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.RemoveItems))]
         static class XUiM_PlayerInventory_RemoveItems_Patch
         {
+            public static void Prefix(IList<ItemStack> _itemStacks, int _multiplier)
+            {
+                for (int i = 0; i < _itemStacks.Count; i++)
+                {
+                    int num = _itemStacks[i].count * _multiplier;
+                    Dbgl($"Need {num} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
+                }
+            }
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 Dbgl("Transpiling XUiM_PlayerInventory_RemoveItems");
@@ -316,6 +344,22 @@ namespace CraftFromContainers
             }
             return itemList.ToArray();
         }
+        private static List<ItemStack> GetAllStorageStacks2(List<ItemStack> items)
+        {
+            ReloadStorages();
+
+            if (currentStorageDict.Count == 0)
+                return items;
+
+            List<ItemStack> itemList = new List<ItemStack>();
+            itemList.AddRange(items);
+            foreach (var kvp in currentStorageDict)
+            {
+                itemList.AddRange(kvp.Value.GetItems());
+
+            }
+            return itemList;
+        }
         private static void AddAllStorageStacks(List<ItemStack> items)
         {
             ReloadStorages();
@@ -352,7 +396,7 @@ namespace CraftFromContainers
 
             if (currentStorageDict.Count == 0)
                 return;
-
+            Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
             foreach (var kvp in currentStorageDict)
             {
                 var items = kvp.Value.GetItems();
@@ -361,6 +405,7 @@ namespace CraftFromContainers
                     if (items[j].itemValue.type == _itemStacks[i].itemValue.type)
                     {
                         int toRem = Math.Min(numLeft, items[j].count);
+                        Dbgl($"Removing {toRem}/{numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
                         numLeft -= toRem;
                         if (items[j].count <= toRem)
                             items[j].Clear();
