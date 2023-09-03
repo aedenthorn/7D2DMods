@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <xml>
-	<ModInfo>
-		<Name value="RemoteStorageAccess" />
-		<Description value="Lets you access nearby containers remotely." />
-		<Author value="aedenthorn" />
-		<Version value="0.2.0" />
-	</ModInfo>
+  <Name value="RemoteStorageAccess" />
+  <DisplayName value="Remote Storage Access" />
+  <Version value="0.3.0" />
+  <Description value="Lets you access nearby containers remotely." />
+  <Author value="aedenthorn" />
 </xml>

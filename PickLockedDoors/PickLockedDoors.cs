@@ -38,7 +38,7 @@ namespace PickLockedDoors
         public static void Dbgl(object str, bool prefix = true)
         {
             if (config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
         [HarmonyPatch(typeof(GameManager), "StartGame")]
         static class GameManager_StartGame_Patch
@@ -71,9 +71,9 @@ namespace PickLockedDoors
         static class BlockDoorSecure_OnBlockActivated_Patch
         {
 
-            static void Postfix(BlockDoorSecure __instance, int _indexInBlockActivationCommands, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player, ref bool __result)
+            static void Postfix(WorldBase _world, string _commandName, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player, ref bool __result)
             {
-                if (!config.modEnabled || _indexInBlockActivationCommands != 7)
+                if (!config.modEnabled || _commandName != "pick")
                     return;
 
                 Dbgl("Starting to pick door lock");

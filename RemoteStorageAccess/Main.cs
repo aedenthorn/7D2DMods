@@ -64,7 +64,7 @@ namespace RemoteStorageAccess
         public static void Dbgl(object str, bool prefix = true)
         {
             if(config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
         [HarmonyPatch(typeof(GameManager), "StartGame")]

@@ -16,7 +16,6 @@ namespace ShowRemainingToClear
     {
         private static ShowRemainingToClear context;
         private static Mod mod;
-        private static Dictionary<Vector3i, TileEntitySecureLootContainer> storageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
         public static ModConfig config;
         public void InitMod(Mod modInstance)
         {
@@ -43,7 +42,7 @@ namespace ShowRemainingToClear
         public static void Dbgl(object str, bool prefix = true)
         {
             if (config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
         [HarmonyPatch(typeof(XUiC_QuestTrackerObjectiveEntry), nameof(XUiC_QuestTrackerObjectiveEntry.GetBindingValue))]

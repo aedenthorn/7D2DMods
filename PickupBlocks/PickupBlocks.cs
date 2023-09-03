@@ -35,10 +35,10 @@ namespace PickupBlocks
                     Dbgl($"Patching {t.Name}");
                     harmony.Patch(
                         mi,
-                        postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(PickupBlocks.GetBlockActivationCommands))
+                        postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(GetBlockActivationCommands))
                     );
 
-                    mi = t.GetMethod("OnBlockActivated", new Type[] { typeof(int), typeof(WorldBase), typeof(int), typeof(Vector3i), typeof(BlockValue), typeof(EntityAlive) });
+                    mi = t.GetMethod("OnBlockActivated", new Type[] { typeof(string), typeof(WorldBase), typeof(int), typeof(Vector3i), typeof(BlockValue), typeof(EntityAlive) });
                     if (mi.DeclaringType == t)
                     {
                         foreach(var p in mi.GetParameters())
@@ -47,7 +47,7 @@ namespace PickupBlocks
                             {
                                 harmony.Patch(
                                     mi,
-                                    new HarmonyMethod(typeof(PickupBlocks), nameof(PickupBlocks.OnBlockActivatedOne))
+                                    new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedOne))
                                 );
                                 break;
                             }
@@ -55,7 +55,7 @@ namespace PickupBlocks
                             {
                                 harmony.Patch(
                                     mi,
-                                    new HarmonyMethod(typeof(PickupBlocks), nameof(PickupBlocks.OnBlockActivatedTwo))
+                                    new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedTwo))
                                 );
                                 break;
                             }
@@ -66,8 +66,8 @@ namespace PickupBlocks
                     {
                         harmony.Patch(
                             mi,
-                            new HarmonyMethod(typeof(PickupBlocks), nameof(PickupBlocks.GetActivationText_Prefix)),
-                            new HarmonyMethod(typeof(PickupBlocks), nameof(PickupBlocks.GetActivationText_Postfix))
+                            new HarmonyMethod(typeof(PickupBlocks), nameof(GetActivationText_Prefix)),
+                            new HarmonyMethod(typeof(PickupBlocks), nameof(GetActivationText_Postfix))
                         );
                     }
                 }
@@ -82,19 +82,17 @@ namespace PickupBlocks
             AddTakeCommand(_world, _blockPos, temp);
             __result = temp.ToArray();
         }
-        public static bool OnBlockActivatedOne(Block __instance, int _indexInBlockActivationCommands, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
+        public static bool OnBlockActivatedOne(Block __instance, string _commandName, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            var cmds = __instance.GetBlockActivationCommands(_world, _blockValue, _cIdx, _blockPos, _player);
-            if (!config.modEnabled || _blockValue.ischild || _indexInBlockActivationCommands >= cmds.Length || cmds[_indexInBlockActivationCommands].text != "take")
+            if (!config.modEnabled || _blockValue.ischild || _commandName != "take")
                 return true;
             TakeBlock(_world, _cIdx, _blockPos, _blockValue, _player);
             return false;
         }
         
-        public static bool OnBlockActivatedTwo(Block __instance, int _indexInBlockActivationCommands, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
+        public static bool OnBlockActivatedTwo(Block __instance, string _commandName, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            var cmds = __instance.GetBlockActivationCommands(_world, _blockValue, _clrIdx, _blockPos, _player);
-            if (!config.modEnabled || _blockValue.ischild || _indexInBlockActivationCommands >= cmds.Length || cmds[_indexInBlockActivationCommands].text != "take")
+            if (!config.modEnabled || _blockValue.ischild || _commandName != "take")
                 return true;
             TakeBlock(_world, _clrIdx, _blockPos, _blockValue, _player);
             return false;
@@ -132,7 +130,7 @@ namespace PickupBlocks
         public static void Dbgl(object str, bool prefix = true)
         {
             if (config.isDebug)
-                Debug.Log((prefix ? mod.ModInfo.Name.Value + " " : "") + str);
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
         private static void AddTakeCommand(WorldBase _world, Vector3i _blockPos, List<BlockActivationCommand> temp)
         {
@@ -182,7 +180,7 @@ namespace PickupBlocks
             }
             Dbgl($"Can pickup? {block.CanPickup}");
 
-            block.CanPickup = true;
+            //block.CanPickup = true;
             block.PickedUpItemValue = block.Properties.Params1[Block.PropCanPickup];
             QuestEventManager.Current.BlockPickedUp(block.GetBlockName(), _blockPos);
             QuestEventManager.Current.ItemAdded(itemStack);
