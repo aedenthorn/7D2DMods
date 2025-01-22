@@ -208,16 +208,4 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Copy to plugins folder and zip -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <ItemGroup>
-      <AllFiles Include="$(TargetDir)**\*.*" Exclude="$(TargetDir)**\*.pdb" />
-    </ItemGroup>
-    <MakeDir Directories="$(TargetDir)..\Release\$(TargetName)" />
-    <Copy SourceFiles="@(AllFiles)" DestinationFolder="$(GamePath)\Mods\$(TargetName)\%(RecursiveDir)"></Copy>
-    <Delete Files="$(ProjectDir)\bin\$(TargetName).zip" />
-    <Copy SourceFiles="@(AllFiles)" DestinationFolder="$(TargetDir)..\Release\$(TargetName)\%(RecursiveDir)"></Copy>
-    <ZipDirectory SourceDirectory="$(TargetDir)..\Release" DestinationFile="$(ProjectDir)\bin\$(TargetName).zip" />
-    <RemoveDir Directories="$(TargetDir)..\Release" />
-  </Target>
 </Project>

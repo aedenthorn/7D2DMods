@@ -6,14 +6,13 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using Path = System.IO.Path;
 
 namespace RemoteStorageAccess
 {
-    public class Main : IModApi
+    public class RemoteStorageAccess : IModApi
     {
 
 
@@ -29,8 +28,10 @@ namespace RemoteStorageAccess
         public static Rect windowRect;
 
         public static ModConfig config;
-        public static Main context;
+        public static RemoteStorageAccess context;
         public static Mod mod;
+        public static bool openingStorage;
+
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -80,10 +81,14 @@ namespace RemoteStorageAccess
         [HarmonyPatch(typeof(GameManager), "lootContainerOpened")]
         static class GameManager_lootContainerOpened_Patch
         {
-            static void Postfix(TileEntityLootContainer _te)
+            static void Postfix(ITileEntity _te)
             {
-                if (!config.modEnabled || !_te.bPlayerStorage)
+                ITileEntityLootable selfOrFeature = _te.GetSelfOrFeature<ITileEntityLootable>();
+                if (selfOrFeature == null || !config.modEnabled || !selfOrFeature.bPlayerStorage)
+                {
                     return;
+                }
+
                 if (sortedStorageList.Count == 0)
                     ReloadStorages();
                 if (sortedStorageList.Contains(_te.ToWorldPos()) && currentStorage != _te.ToWorldPos())
@@ -207,7 +212,27 @@ namespace RemoteStorageAccess
                 }
             }
         }
-        
+
+        [HarmonyPatch(typeof(XUiC_LootWindow), nameof(XUiC_LootWindow.Update))]
+        static class XUiC_LootWindow_Update_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling XUiC_LootWindow_Update");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Ldsfld && (FieldInfo)codes[i].operand == AccessTools.Field(typeof(Constants), nameof(Constants.cCollectItemDistance)))
+                    {
+                        Dbgl($"Overriding max distance to keep loot window open");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetCollectDistanceForTranspiler))));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
         [HarmonyPatch(typeof(BlockSecureLoot), nameof(BlockSecureLoot.GetActivationText))]
         static class BlockSecureLoot_GetActivationText_Patch
         {
@@ -220,7 +245,7 @@ namespace RemoteStorageAccess
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
                     {
                         Dbgl($"Using method to get string for storage hover name at {i}");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Main), nameof(Main.GetStorageNameForTranspiler))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
                         break;
                     }
@@ -242,7 +267,7 @@ namespace RemoteStorageAccess
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
                     {
                         Dbgl($"Using method to get string for storage hover name at {i}");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Main), nameof(Main.GetStorageNameForTranspiler))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
                         break;
                     }
@@ -251,8 +276,12 @@ namespace RemoteStorageAccess
                 return codes.AsEnumerable();
             }
         }
-        
-        
+        private static float GetCollectDistanceForTranspiler(float distance)
+        {
+            if (!config.modEnabled)
+                return distance;
+            return float.MaxValue / 2f;
+        }
         private static string GetStorageNameForTranspiler(string input, TileEntityLootContainer te)
         {
             if (!config.modEnabled || !nameDict.TryGetValue(ToXYZ(te.ToWorldPos()), out string name) || name == "")
@@ -264,8 +293,10 @@ namespace RemoteStorageAccess
         {
             if (sortedStorageList.Count > 0)
             {
+                Dbgl($"Opening storage at {currentStorage}; is server {SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer}");
+                openingStorage = true;
                 GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
-                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, -1, GameManager.Instance.World.GetPrimaryPlayer().entityId, null);
+                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, GameManager.Instance.World.GetPrimaryPlayer().entityId, "container");
             }
         }
         public static void ReloadStorages()
@@ -281,27 +312,50 @@ namespace RemoteStorageAccess
             nameDict = File.Exists(nameDictPath) ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(nameDictPath)) : new Dictionary<string, string>();
             for(int i = 0; i < world.ChunkClusters.Count; i++)
             {
+
                 var cc = world.ChunkClusters[i];
-                ReaderWriterLockSlim sync = (ReaderWriterLockSlim)AccessTools.Field(typeof(WorldChunkCache), "sync").GetValue(cc);
-                sync.EnterReadLock();
+
+                Dbgl($"cc has {cc.chunks.dict.Count} chunks");
                 foreach (var c in cc.chunks.dict.Values)
                 {
-                    DictionaryList<Vector3i, TileEntity> entities = (DictionaryList<Vector3i, TileEntity>)AccessTools.Field(typeof(Chunk), "tileEntities").GetValue(c);
-                    foreach (var kvp in entities.dict)
+                    c.EnterReadLock();
+                    foreach (var kvp in c.tileEntities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
-                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
+                        var entity = (kvp.Value as TileEntityComposite);
+                        if (entity != null)
                         {
-                            (kvp.Value as TileEntitySecureLootContainer).bWasTouched = (kvp.Value as TileEntitySecureLootContainer).bTouched;
-                            knownStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer };
-                            if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
-                                currentStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = kvp.Value as TileEntitySecureLootContainer };
-                            if(!nameDict.ContainsKey(ToXYZ(loc)))
-                                nameDict.Add(ToXYZ(loc), "");
+                            var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                            if (lootable != null && lootable.bPlayerStorage)
+                            {
+                                var lockable = entity.GetFeature<ILockable>();
+                                if(lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                {
+                                    lootable.bWasTouched = lootable.bTouched;
+                                    knownStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = lootable };
+                                    if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                        currentStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = lootable };
+                                    var xyz = ToXYZ(loc);
+                                    if (!nameDict.ContainsKey(xyz))
+                                    {
+                                        nameDict[xyz] = "";
+                                    }
+                                    if (nameDict[xyz] == "")
+                                    {
+                                        var text = entity.GetFeature<ITileEntitySignable>() as TEFeatureSignable;
+                                        if (text != null && !string.IsNullOrEmpty(text.GetAuthoredText().Text))
+                                        {
+                                            nameDict[xyz] = text.GetAuthoredText().Text;
+                                        }
+
+                                    }
+                                }
+                            }
                         }
                     }
+                    c.ExitReadLock();
+
                 }
-                sync.ExitReadLock();
             }
             Dbgl($"Got {currentStorageDict.Count} storages");
             sortedStorageList = new List<Vector3i>(currentStorageDict.Keys.ToArray());

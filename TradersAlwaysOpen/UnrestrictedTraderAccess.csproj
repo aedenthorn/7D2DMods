@@ -8,6 +8,11 @@
     <Compile Include="..\AedenthornUtils\AedenthornUtils.cs" Link="AedenthornUtils.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Update="UnrestrictedTraderAccess.cs">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="ModInfo.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

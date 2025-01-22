@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+  <Name value="UnrestrictedTraderAccess" />
+  <DisplayName value="Unrestricted Trader Access" />
+  <Description value="Sets traders to never close and optionally removes build protection in trader area." />
+  <Author value="aedenthorn" />
+  <Version value="0.1.1" />
+</xml>

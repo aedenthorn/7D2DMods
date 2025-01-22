@@ -5,6 +5,6 @@
         public bool naming;
         public int cluster;
         public Chunk chunk;
-        public TileEntityLootContainer te;
+        public TEFeatureStorage te;
     }
 }

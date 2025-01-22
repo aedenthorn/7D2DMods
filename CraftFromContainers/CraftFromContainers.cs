@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Platform;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,8 +17,8 @@ namespace CraftFromContainers
     {
         private static CraftFromContainers context;
         private static Mod mod;
-        private static Dictionary<Vector3i, TileEntitySecureLootContainer> knownStorageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
-        private static Dictionary<Vector3i, TileEntitySecureLootContainer> currentStorageDict = new Dictionary<Vector3i, TileEntitySecureLootContainer>();
+        private static Dictionary<Vector3i, TEFeatureStorage> knownStorageDict = new Dictionary<Vector3i, TEFeatureStorage>();
+        private static Dictionary<Vector3i, TEFeatureStorage> currentStorageDict = new Dictionary<Vector3i, TEFeatureStorage>();
         public static ModConfig config;
         public void InitMod(Mod modInstance)
         {
@@ -104,14 +105,6 @@ namespace CraftFromContainers
         [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.RemoveItems))]
         static class XUiM_PlayerInventory_RemoveItems_Patch
         {
-            public static void Prefix(IList<ItemStack> _itemStacks, int _multiplier)
-            {
-                for (int i = 0; i < _itemStacks.Count; i++)
-                {
-                    int num = _itemStacks[i].count * _multiplier;
-                    Dbgl($"Need {num} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
-                }
-            }
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 Dbgl("Transpiling XUiM_PlayerInventory_RemoveItems");
@@ -203,6 +196,52 @@ namespace CraftFromContainers
             }
         }
         
+        [HarmonyPatch(typeof(ItemActionEntryRepair), nameof(ItemActionEntryRepair.RefreshEnabled))]
+        static class ItemActionEntryRepair_RefreshEnabled_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionEntryRepair.RefreshEnabled");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) } ))
+                    {
+                        Dbgl("Adding method to count items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem2))));
+                        codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        [HarmonyPatch(typeof(ItemActionEntryRepair), nameof(ItemActionEntryRepair.OnActivated))]
+        static class ItemActionEntryRepair_OnActivated_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.enableForRepairAndUpgrade)
+                    return codes;
+                Dbgl("Transpiling ItemActionEntryRepair.OnActivated");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
+                    {
+                        Dbgl("Adding method to count items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem2))));
+                        codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
         [HarmonyPatch(typeof(ItemActionRepair), "CanRemoveRequiredResource")]
         static class ItemActionRepair_CanRemoveRequiredResource_Patch
         {
@@ -242,7 +281,7 @@ namespace CraftFromContainers
                     {
                         Dbgl("Adding method to remove items from all storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForUpgrade))));
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_2));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
                         break;
                     }
@@ -316,7 +355,28 @@ namespace CraftFromContainers
                 return count;
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.GetItems();
+                var items = kvp.Value.items;
+                for (int j = 0; j < items.Length; j++)
+                {
+                    if (items[j].itemValue.type == item.type)
+                    {
+                        count += items[j].count;
+                    }
+                }
+            }
+            return count;
+        }
+        private static int AddAllStoragesCountItem2(int count, ItemClass itemClass)
+        {
+            ReloadStorages();
+
+            var item = new ItemValue(itemClass.Id, false);
+
+            if (currentStorageDict.Count == 0)
+                return count;
+            foreach (var kvp in currentStorageDict)
+            {
+                var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
                     if (items[j].itemValue.type == item.type)
@@ -339,7 +399,7 @@ namespace CraftFromContainers
             itemList.AddRange(items);
             foreach (var kvp in currentStorageDict)
             {
-                itemList.AddRange(kvp.Value.GetItems());
+                itemList.AddRange(kvp.Value.items);
 
             }
             return itemList.ToArray();
@@ -355,7 +415,7 @@ namespace CraftFromContainers
             itemList.AddRange(items);
             foreach (var kvp in currentStorageDict)
             {
-                itemList.AddRange(kvp.Value.GetItems());
+                itemList.AddRange(kvp.Value.items);
 
             }
             return itemList;
@@ -369,7 +429,7 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
-                items.AddRange(kvp.Value.GetItems());
+                items.AddRange(kvp.Value.items);
             }
         }
 
@@ -382,7 +442,7 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.GetItems();
+                var items = kvp.Value.items;
                 numLeft -= GetItemCount(items, _itemStacks[i].itemValue);
                 if(numLeft <= 0)
                     return numLeft;
@@ -399,7 +459,7 @@ namespace CraftFromContainers
             Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.GetItems();
+                var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
                     if (items[j].itemValue.type == _itemStacks[i].itemValue.type)
@@ -420,30 +480,43 @@ namespace CraftFromContainers
             }
         }
         
-        private static int RemoveRemainingForUpgrade(int numRemoved, ItemActionRepair action, ItemValue itemValue)
+        private static int RemoveRemainingForUpgrade(int numRemoved, ItemActionRepair action, BlockValue blockValue)
         {
             if (!config.modEnabled)
                 return numRemoved;
-            object upgradeInfo = AccessTools.Field(typeof(ItemActionRepair), "currentUpgradeInfo").GetValue(action);
-            int totalToRemove = ((int)AccessTools.Field(upgradeInfo.GetType(), "ItemCount").GetValue(upgradeInfo));
-
-            if (totalToRemove <= numRemoved)
+            Block block = blockValue.Block;
+            ItemValue item = ItemClass.GetItem(action.GetUpgradeItemName(block), false);
+            int totalToRemove;
+            if (!int.TryParse(block.Properties.Values[Block.PropUpgradeBlockClassItemCount], out totalToRemove))
+            {
+                Dbgl($"couldn't get total to remove");
                 return numRemoved;
+            }
+            Dbgl($"need to remove {totalToRemove}, removed {numRemoved} from bag");
+
+            if (totalToRemove <= numRemoved) {
+                Dbgl($"already enough from bag");
+                return numRemoved;
+            }
 
             var numLeft = totalToRemove - numRemoved;
 
             ReloadStorages();
+
+            Dbgl($"current storage dict has {currentStorageDict.Count} storages");
 
             if (currentStorageDict.Count == 0)
                 return numRemoved;
 
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.GetItems();
+                var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
-                    if (items[j].itemValue.type == itemValue.type)
+                    if (items[j].itemValue.type == item.type)
                     {
+                        Dbgl($"found {items[j].count} in storage");
+
                         int toRem = Math.Min(numLeft, items[j].count);
                         numLeft -= toRem;
                         if (items[j].count <= toRem)
@@ -457,6 +530,7 @@ namespace CraftFromContainers
                     }
                 }
             }
+            Dbgl($"still missing {numLeft}!");
             return totalToRemove - numLeft;
         }
         
@@ -478,7 +552,7 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.GetItems();
+                var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
                     if (items[j].itemValue.type == _itemStack.itemValue.type)
@@ -498,32 +572,80 @@ namespace CraftFromContainers
             }
             return totalToRemove - numLeft;
         }
+        private static void RemoveRemainingForRepair2(List<ItemStack> _itemStacks, int i, int numLeft)
+        {
+            ReloadStorages();
+
+            if (currentStorageDict.Count == 0)
+                return;
+            Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
+            foreach (var kvp in currentStorageDict)
+            {
+                var items = kvp.Value.items;
+                for (int j = 0; j < items.Length; j++)
+                {
+                    if (items[j].itemValue.type == _itemStacks[i].itemValue.type)
+                    {
+                        int toRem = Math.Min(numLeft, items[j].count);
+                        Dbgl($"Removing {toRem}/{numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
+                        numLeft -= toRem;
+                        if (items[j].count <= toRem)
+                            items[j].Clear();
+                        else
+                            items[j].count -= toRem;
+
+                        kvp.Value.SetModified();
+                        if (numLeft <= 0)
+                            return;
+                    }
+                }
+            }
+        }
 
         private static void ReloadStorages()
         {
             currentStorageDict.Clear();
+            knownStorageDict.Clear();
             var pos = GameManager.Instance.World.GetPrimaryPlayer().position;
-            for (int i = 0; i < GameManager.Instance.World.ChunkClusters.Count; i++)
+            var world = GameManager.Instance.World;
+            for (int i = 0; i < world.ChunkClusters.Count; i++)
             {
-                var cc = GameManager.Instance.World.ChunkClusters[i];
-                ReaderWriterLockSlim sync = (ReaderWriterLockSlim)AccessTools.Field(typeof(WorldChunkCache), "sync").GetValue(cc);
-                sync.EnterReadLock();
-                foreach (var c in cc.chunks.dict.Values)
+
+                var cc = world.ChunkClusters[i];
+
+                foreach (var c in cc.chunks.dict.Values.ToArray())
                 {
-                    DictionaryList<Vector3i, TileEntity> entities = (DictionaryList<Vector3i, TileEntity>)AccessTools.Field(typeof(Chunk), "tileEntities").GetValue(c);
-                    foreach (var kvp in entities.dict)
+                    c.EnterReadLock();
+                    foreach (var key in c.tileEntities.dict.Keys.ToArray())
                     {
-                        var loc = kvp.Value.ToWorldPos();
-                        if (kvp.Value is TileEntitySecureLootContainer && (kvp.Value as TileEntitySecureLootContainer).bPlayerStorage && !(kvp.Value as TileEntitySecureLootContainer).IsUserAccessing() && (!(kvp.Value as TileEntitySecureLootContainer).IsLocked() || (kvp.Value as TileEntitySecureLootContainer).IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
+                        if (c.tileEntities.dict.TryGetValue(key, out var val))
                         {
-                            knownStorageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
-                            if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
-                                currentStorageDict[loc] = kvp.Value as TileEntitySecureLootContainer;
+                            var loc = val.ToWorldPos();
+                            var entity = (val as TileEntityComposite);
+                            if (entity != null)
+                            {
+                                var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                                if (lootable != null && lootable.bPlayerStorage)
+                                {
+                                    var lockable = entity.GetFeature<ILockable>();
+                                    if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                    {
+                                        knownStorageDict[loc] = lootable;
+                                        if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                            currentStorageDict[loc] = lootable;
+
+                                    }
+
+                                }
+
+                            }
                         }
                     }
+                    c.ExitReadLock();
+
                 }
-                sync.ExitReadLock();
             }
+
         }
         public static int GetItemCount(ItemStack[] slots, ItemValue _itemValue)
         {

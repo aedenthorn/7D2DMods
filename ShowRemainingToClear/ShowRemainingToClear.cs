@@ -50,7 +50,7 @@ namespace ShowRemainingToClear
         {
             public static bool Prefix(XUiC_QuestTrackerObjectiveEntry __instance, ref string value, string bindingName)
             {
-                if (!config.modEnabled || !(__instance.Objective is ObjectiveClearSleepers) || bindingName != "objectivedescription")
+                if (!config.modEnabled || !(__instance.QuestObjective is ObjectiveClearSleepers) || bindingName != "objectivedescription")
                     return true;
 
                 //var spawnPointList = AccessTools.Field(typeof(SleeperVolume), "spawnPointList");
@@ -67,7 +67,7 @@ namespace ShowRemainingToClear
                 if (left <= 0)
                     return true;
 
-                value = string.Format(config.remainingText, __instance.Objective.Description, left);
+                value = string.Format(config.remainingText, __instance.QuestObjective.Description, left);
                 return false;
             }
         }

@@ -10,25 +10,25 @@ namespace RemoteStorageAccess
         public ModConfig config;
         private void Awake()
         {
-            config = Main.config;
+            config = RemoteStorageAccess.config;
         }
 
         private void OnGUI()
         {
 
-            if (!config.modEnabled || !Main.showingList || GameManager.Instance?.World?.GetPrimaryPlayer() == null)
+            if (!config.modEnabled || !RemoteStorageAccess.showingList || GameManager.Instance?.World?.GetPrimaryPlayer() == null)
                 return;
 
-            Main.windowRect.height = Mathf.Clamp((Main.sortedStorageList.Count) * (config.buttonHeight + config.betweenSpace) + 40, 50, config.windowHeight);
+            RemoteStorageAccess.windowRect.height = Mathf.Clamp((RemoteStorageAccess.sortedStorageList.Count) * (config.buttonHeight + config.betweenSpace) + 40, 50, config.windowHeight);
 
             GUI.backgroundColor = new Color(config.windowBackgroundColorR, config.windowBackgroundColorG, config.windowBackgroundColorB, config.windowBackgroundColorA);
 
-            Main.windowRect = GUI.Window(424242, Main.windowRect, new GUI.WindowFunction(WindowBuilder), config.windowTitleText);
+            RemoteStorageAccess.windowRect = GUI.Window(424242, RemoteStorageAccess.windowRect, new GUI.WindowFunction(WindowBuilder), config.windowTitleText);
 
-            if (!Input.GetKey(KeyCode.Mouse0) && (Main.windowRect.x != config.windowPositionX || Main.windowRect.y != config.windowPositionY))
+            if (!Input.GetKey(KeyCode.Mouse0) && (RemoteStorageAccess.windowRect.x != config.windowPositionX || RemoteStorageAccess.windowRect.y != config.windowPositionY))
             {
-                config.windowPositionX = (int)Main.windowRect.x;
-                config.windowPositionY = (int)Main.windowRect.y;
+                config.windowPositionX = (int)RemoteStorageAccess.windowRect.x;
+                config.windowPositionY = (int)RemoteStorageAccess.windowRect.y;
                 var path = Path.Combine(AedenthornUtils.GetAssetPath(this, true), "config.json");
                 File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
@@ -39,17 +39,17 @@ namespace RemoteStorageAccess
             GUILayout.BeginVertical();
             GUI.DragWindow(new Rect(0, 0, config.buttonWidth + config.buttonHeight + 30, 20));
 
-            Main.editing = false;
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, new GUILayoutOption[] { GUILayout.Width(config.buttonWidth + config.buttonHeight + 30), GUILayout.Height(Main.windowRect.height - 30) });
-            for (int i = 0; i < Main.sortedStorageList.Count; i++)
+            RemoteStorageAccess.editing = false;
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition, new GUILayoutOption[] { GUILayout.Width(config.buttonWidth + config.buttonHeight + 30), GUILayout.Height(RemoteStorageAccess.windowRect.height - 30) });
+            for (int i = 0; i < RemoteStorageAccess.sortedStorageList.Count; i++)
             {
                 GUILayout.BeginHorizontal();
-                var coords = Main.ToXYZ(Main.sortedStorageList[i]);
-                var naming = Main.currentStorageDict[Main.sortedStorageList[i]].naming;
+                var coords = RemoteStorageAccess.ToXYZ(RemoteStorageAccess.sortedStorageList[i]);
+                var naming = RemoteStorageAccess.currentStorageDict[RemoteStorageAccess.sortedStorageList[i]].naming;
                 if (naming)
                 {
-                    Main.editing = true;
-                    Main.nameDict[coords] = GUILayout.TextField(Main.nameDict[Main.ToXYZ(Main.sortedStorageList[i])], new GUILayoutOption[]{
+                    RemoteStorageAccess.editing = true;
+                    RemoteStorageAccess.nameDict[coords] = GUILayout.TextField(RemoteStorageAccess.nameDict[RemoteStorageAccess.ToXYZ(RemoteStorageAccess.sortedStorageList[i])], new GUILayoutOption[]{
                         GUILayout.Width(config.buttonWidth),
                         GUILayout.Height(config.buttonHeight)
                     });
@@ -57,20 +57,20 @@ namespace RemoteStorageAccess
                 else
                 {
                     var color = GUI.backgroundColor;
-                    if (Main.sortedStorageList.IndexOf(Main.currentStorage) == i && GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
+                    if (RemoteStorageAccess.sortedStorageList.IndexOf(RemoteStorageAccess.currentStorage) == i && GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
                     {
                         GUI.backgroundColor = new Color(config.currentColorR, config.currentColorG, config.currentColorB, config.currentColorA);
                     }
-                    if (GUILayout.Button(Main.nameDict[coords] != "" ? Main.nameDict[coords] : Main.sortedStorageList[i] + "", new GUILayoutOption[]{
+                    if (GUILayout.Button(RemoteStorageAccess.nameDict[coords] != "" ? RemoteStorageAccess.nameDict[coords] : RemoteStorageAccess.sortedStorageList[i] + "", new GUILayoutOption[]{
                         GUILayout.Width(config.buttonWidth),
                         GUILayout.Height(config.buttonHeight)
                     }))
                     {
-                        Main.Dbgl($"Pressed button {i}");
+                        RemoteStorageAccess.Dbgl($"Pressed button {i}");
 
-                        File.WriteAllText(Main.nameDictPath, JsonConvert.SerializeObject(Main.nameDict));
-                        Main.currentStorage = Main.sortedStorageList[i];
-                        Main.OpenStorage();
+                        File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
+                        RemoteStorageAccess.currentStorage = RemoteStorageAccess.sortedStorageList[i];
+                        RemoteStorageAccess.OpenStorage();
                     }
                     GUI.backgroundColor = color;
                 }
@@ -80,16 +80,16 @@ namespace RemoteStorageAccess
                     }))
                 {
                     naming = !naming;
-                    Main.currentStorageDict[Main.sortedStorageList[i]].naming = naming;
-                    Main.Dbgl($"Pressed edit button {i}, naming {naming}");
+                    RemoteStorageAccess.currentStorageDict[RemoteStorageAccess.sortedStorageList[i]].naming = naming;
+                    RemoteStorageAccess.Dbgl($"Pressed edit button {i}, naming {naming}");
                     if (!naming)
                     {
-                        File.WriteAllText(Main.nameDictPath, JsonConvert.SerializeObject(Main.nameDict));
-                        Main.ReloadStorages();
+                        File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
+                        RemoteStorageAccess.ReloadStorages();
                     }
                 }
                 GUILayout.EndHorizontal();
-                if (i < Main.sortedStorageList.Count - 1)
+                if (i < RemoteStorageAccess.sortedStorageList.Count - 1)
                     GUILayout.Space(config.betweenSpace);
             }
             GUILayout.EndScrollView();

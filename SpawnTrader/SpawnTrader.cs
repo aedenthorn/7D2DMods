@@ -9,7 +9,7 @@ using Path = System.IO.Path;
 
 namespace SpawnTrader
 {
-    public class Main : IModApi
+    public class SpawnTrader : IModApi
     {
         public static List<Vector3i> sortedStorageList = new List<Vector3i>();
         public static Vector3i currentStorage;
@@ -21,7 +21,7 @@ namespace SpawnTrader
         public static Rect windowRect;
 
         public static ModConfig config;
-        public static Main context;
+        public static SpawnTrader context;
         public static Mod mod;
 
         public static List<string> traderNames = new List<string>()
@@ -183,18 +183,13 @@ namespace SpawnTrader
                     return null;
 
                 Transform t = raycastHit.transform;
-                Entity entity;
+                EntityTrader entity;
                 while (t != null)
                 {
-                    if ((entity = t.GetComponent<Entity>()) != null)
+                    if ((entity = t.GetComponentInChildren<EntityTrader>()) != null)
                     {
-                        if (entity is EntityTrader)
-                        {
-                            Dbgl($"Returning {entity.name}");
-                            return entity as EntityTrader;
-                        }
-                        Dbgl($"Wrong entity, returning null");
-                        return null;
+                        Dbgl($"Returning {entity.name}");
+                        return entity;
                     }
                     t = t.parent;
                 }

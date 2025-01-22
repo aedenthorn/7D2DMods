@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <xml>
-	<ModInfo>
-		<Name value="PickLockedDoors" />
-		<Description value="Lets you unlock doors using lockpicks." />
-		<Author value="aedenthorn" />
-		<Version value="0.3.0" />
-	</ModInfo>
+  <Name value="PickLockedDoors" />
+  <DisplayName  value="Pick Locked Doors" />
+  <Description value="Lets you unlock doors using lockpicks." />
+  <Author value="aedenthorn" />
+  <Version value="1.0.0" />
 </xml>

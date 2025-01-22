@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuickStore", "QuickStore\Qu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CraftFromContainers", "CraftFromContainers\CraftFromContainers.csproj", "{55BF4D52-BC16-4876-936F-A1C97C47AE8D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MapTeleport", "MapTeleport\MapTeleport.csproj", "{DDB21819-7723-4F9A-A664-4B0DC2957BC3}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpawnTrader", "SpawnTrader\SpawnTrader.csproj", "{909765E1-39D5-47C4-8BF0-079AEEDCFE29}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShowRemainingToClear", "ShowRemainingToClear\ShowRemainingToClear.csproj", "{40747578-7FA5-4A5C-8F61-2928664B6E34}"
@@ -24,6 +22,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PickupBlocks", "PickupBlocks\PickupBlocks.csproj", "{364AC674-718B-4597-8981-A03FE5A8D67A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnimalTaming", "AnimalTaming\AnimalTaming.csproj", "{2B22D09C-2BA7-4B18-8280-D70005EE215C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapTeleport", "MapTeleport\MapTeleport.csproj", "{D327F7A6-E051-477D-8CB2-AB692F85809E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnrestrictedTraderAccess", "TradersAlwaysOpen\UnrestrictedTraderAccess.csproj", "{25E45036-BA11-4787-AFAA-7C188561FA74}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,10 +53,6 @@ Global
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{55BF4D52-BC16-4876-936F-A1C97C47AE8D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DDB21819-7723-4F9A-A664-4B0DC2957BC3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{909765E1-39D5-47C4-8BF0-079AEEDCFE29}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -75,6 +73,14 @@ Global
 		{2B22D09C-2BA7-4B18-8280-D70005EE215C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B22D09C-2BA7-4B18-8280-D70005EE215C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B22D09C-2BA7-4B18-8280-D70005EE215C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D327F7A6-E051-477D-8CB2-AB692F85809E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D327F7A6-E051-477D-8CB2-AB692F85809E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D327F7A6-E051-477D-8CB2-AB692F85809E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D327F7A6-E051-477D-8CB2-AB692F85809E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25E45036-BA11-4787-AFAA-7C188561FA74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25E45036-BA11-4787-AFAA-7C188561FA74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25E45036-BA11-4787-AFAA-7C188561FA74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25E45036-BA11-4787-AFAA-7C188561FA74}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
