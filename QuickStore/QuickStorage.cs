@@ -3,9 +3,11 @@ using Newtonsoft.Json;
 using Platform;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Path = System.IO.Path;
@@ -128,10 +130,16 @@ namespace QuickStore
                     continue;
                 var initItem = items[i].Clone(); 
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
-                if (config.storeIgnore.FirstOrDefault(s => s.Equals(itemName)) != null)
+                if (config.storeIgnore.Length > 0)
                 {
-                    Dbgl($"Ignoring {itemName} from config");
-                    continue;
+                    foreach (var s in config.storeIgnore)
+                    {
+                        if (itemName.Equals(s) || (s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))))
+                        {
+                            Dbgl($"Ignoring {itemName} from config");
+                            goto next;
+                        }
+                    }
                 }
                 foreach (var v in storageList)
                 {
@@ -157,6 +165,8 @@ namespace QuickStore
 
                     world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(initItem.itemValue, items[i].count - initItem.count), false);
                 }
+            next:
+                continue;
             }
             Dbgl($"Stored {count} items");
         }
@@ -214,10 +224,16 @@ namespace QuickStore
                     continue;
                 var initItem = items[i].Clone();
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
-                if (config.pullIgnore.FirstOrDefault(s => s.Equals(itemName)) != null)
+                if (config.pullIgnore.Length > 0)
                 {
-                    Dbgl($"Ignoring {itemName} from config");
-                    continue;
+                    foreach (var s in config.pullIgnore)
+                    {
+                        if (itemName.Equals(s) || (s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))))
+                        {
+                            Dbgl($"Ignoring {itemName} from config");
+                            goto cont;
+                        }
+                    }
                 }
                 foreach (var v in storageList)
                 {
@@ -237,6 +253,8 @@ namespace QuickStore
                     Dbgl($"Pulled {items[i].count - initItem.count} of item {itemName}");
                     world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(initItem.itemValue, items[i].count - initItem.count), false);
                 }
+            cont: 
+                continue;
             }
             Dbgl($"Stored {count} items");
         }

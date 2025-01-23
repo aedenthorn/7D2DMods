@@ -4,7 +4,10 @@ using Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Xml.Linq;
 using UnityEngine;
 using Path = System.IO.Path;
 
@@ -24,9 +27,53 @@ namespace UnrestrictedTraderAccess
 
             Harmony harmony = new Harmony(GetType().ToString());
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+            harmony.Patch(
+                original: AccessTools.Method(typeof(Block), nameof(Block.DropItemsOnEvent)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(BlockDamage), nameof(BlockDamage.OnEntityCollidedWithBlock)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(Explosion), nameof(Explosion.AttackBlocks)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(ItemActionDumpWater), nameof(ItemActionDumpWater.ExecuteAction)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(ItemActionRepair), nameof(ItemActionRepair.ExecuteAction)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.CanPickupBlockAt)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+            );
 
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.GetLandClaimOwner), new Type[] { typeof(Vector3i), typeof(PersistentPlayerData) }),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.GetLandClaimOwnerInParty), new Type[] { typeof(EntityPlayer), typeof(PersistentPlayerData) }),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.IsMyLandProtectedBlock)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodTranspiler)) 
+            );
+            
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.IsEmptyPosition)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.PlaceMethodTranspiler)) 
+            );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(World), nameof(World.CanPlaceBlockAt)),
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.PlaceMethodTranspiler)) 
+            );
         }
-
 
         [HarmonyPatch(typeof(GameManager), "Update")]
         static class GameManager_Update_Patch
@@ -40,11 +87,142 @@ namespace UnrestrictedTraderAccess
                 if (AedenthornUtils.CheckKeyDown(config.toggleKey) && !___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
                 {
                     Dbgl($"Pressed toggle key");
-                    config.removeBuildProtection = !config.removeBuildProtection;
-                    GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.removeBuildProtection ? config.ProtectionDisabledText : config.ProtectionEnabledText);
+                    LoadConfig();
+                    config.removeDamageProtection = !config.removeDamageProtection;
+                    GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.removeDamageProtection ? config.damageProtectionDisabledText : config.damageProtectionEnabledText);
                     SaveConfig();
                 }
             }
+        }
+        public static IEnumerable<CodeInstruction> DamageMethodTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            if (!config.modEnabled)
+                return codes;
+            Dbgl("Transpiling damage method");
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if ((codes[i].opcode == OpCodes.Callvirt || codes[i].opcode == OpCodes.Call) && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) }))
+                {
+                    Dbgl("Adding method to override damage protection");
+                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodOverride))));
+                    break;
+                }
+            }
+
+            return codes.AsEnumerable();
+        }
+
+        public static bool DamageMethodOverride(bool result)
+        {
+
+            if (!config.modEnabled || !result || !config.removeDamageProtection)
+                return result;
+            return false;
+        }
+
+        public static IEnumerable<CodeInstruction> LandClaimMethodTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            if (!config.modEnabled)
+                return codes;
+            Dbgl("Transpiling land claim method");
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if ((codes[i].opcode == OpCodes.Callvirt || codes[i].opcode == OpCodes.Call) && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) }))
+                {
+                    Dbgl("Adding method to override land claim protection");
+                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodOverride))));
+                    break;
+                }
+            }
+
+            return codes.AsEnumerable();
+        }
+
+        public static bool LandClaimMethodOverride(bool result)
+        {
+
+            if (!config.modEnabled || !result || !config.removeLandClaimProtection)
+                return result;
+            return false;
+        }
+        public static IEnumerable<CodeInstruction> PlaceMethodTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            if (!config.modEnabled)
+                return codes;
+            Dbgl("Transpiling place method");
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if ((codes[i].opcode == OpCodes.Callvirt || codes[i].opcode == OpCodes.Call) && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) }))
+                {
+                    Dbgl("Adding method to override place protection");
+                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.PlaceMethodOverride))));
+                    break;
+                }
+            }
+
+            return codes.AsEnumerable();
+        }
+
+        public static bool PlaceMethodOverride(bool result)
+        {
+
+            if (!config.modEnabled || !result || !config.removePlaceProtection)
+                return result;
+            return false;
+        }
+
+        [HarmonyPatch(typeof(ItemActionAttack), nameof(ItemActionAttack.Hit))]
+        static class ItemActionAttack_Hit_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.modEnabled)
+                    return codes;
+                Dbgl("Transpiling ItemActionAttack.Hit");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) }))
+                    {
+                        Dbgl("Adding method to override damage protection");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.ItemActionAttackHitOverride))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+
+        public static bool ItemActionAttackHitOverride(bool result, WorldRayHitInfo hitInfo)
+        {
+
+            if (!config.modEnabled || !result)
+                return result;
+
+            if (config.removeDamageProtection)
+                return false;
+
+            Vector3i vector3i = hitInfo.hit.blockPos;
+            var name = ItemClass.GetForId(GameManager.Instance.World.ChunkClusters[hitInfo.hit.clrIdx].GetBlock(vector3i).type).Name;
+            LoadConfig();
+            if (config.alwaysAllowDamageTypes.Length > 0)
+            {
+                foreach (var s in config.alwaysAllowDamageTypes)
+                {
+                    if (name.Equals(s) || (s.EndsWith("*") && name.StartsWith(s.Substring(0, s.Length - 1))))
+                    {
+                        Dbgl($"Allowing damage to {name}");
+                        return false;
+                    }
+                }
+            }
+            Dbgl($"Preventing damage to {name}");
+            return result;
         }
 
         [HarmonyPatch(typeof(TraderInfo), nameof(TraderInfo.IsWarningTime))]
@@ -198,32 +376,38 @@ namespace UnrestrictedTraderAccess
             }
         }
 
-
-        [HarmonyPatch(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) })]
-        static class World_IsWithinTraderArea_Patch1
+        [HarmonyPatch(typeof(World), nameof(World.CanPlaceLandProtectionBlockAt))]
+        static class World_CanPlaceLandProtectionBlockAt_Patch
         {
-
-            static bool Prefix(ref bool __result)
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                if (!config.modEnabled || !config.removeBuildProtection)
-                    return true;
-                __result = false;
-                return false;
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.modEnabled)
+                    return codes;
+                Dbgl("Transpiling World.CanPlaceLandProtectionBlockAt");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Call && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i), typeof(Vector3i) }))
+                    {
+                        Dbgl("Adding method to override land claim protection");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.CanPlaceLandProtectionBlockAtOverride))));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
             }
         }
-        
-        [HarmonyPatch(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i), typeof(Vector3i) })]
-        static class World_IsWithinTraderArea_Patch2
-        {
 
-            static bool Prefix(ref bool __result)
-            {
-                if (!config.modEnabled || !config.removeBuildProtection)
-                    return true;
-                __result = false;
-                return false;
-            }
+        public static bool CanPlaceLandProtectionBlockAtOverride(bool result)
+        {
+            if(!config.modEnabled || !config.removeLandClaimProtection) 
+                return result;
+            return false;
         }
+
+
+
 
         [HarmonyPatch(typeof(World), nameof(World.IsWithinTraderPlacingProtection), new Type[] { typeof(Vector3i) })]
         static class World_IsWithinTraderPlacingProtection_Patch1
@@ -231,7 +415,7 @@ namespace UnrestrictedTraderAccess
 
             static bool Prefix(ref bool __result)
             {
-                if (!config.modEnabled || !config.removeBuildProtection)
+                if (!config.modEnabled || !config.removePlaceProtection)
                     return true;
                 __result = false;
                 return false;
@@ -243,7 +427,7 @@ namespace UnrestrictedTraderAccess
 
             static bool Prefix(ref bool __result)
             {
-                if (!config.modEnabled || !config.removeBuildProtection)
+                if (!config.modEnabled || !config.removePlaceProtection)
                     return true;
                 __result = false;
                 return false;

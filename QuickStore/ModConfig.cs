@@ -9,8 +9,8 @@ namespace QuickStore
 
         public string storeKey = "q";
         public string modKey = "left alt";
-        public string[] storeIgnore = { "resourceNameHere", "resourceNameHere" };
-        public string[] pullIgnore = { "resourceNameHere", "resourceNameHere" };
+        public string[] storeIgnore = { "resourceNameHere", "resourcePrefixHere*" };
+        public string[] pullIgnore = { "resourceNameHere", "resourcePrefixHere*" };
 
     }
 }

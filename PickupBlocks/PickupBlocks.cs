@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using static UnityDistantTerrain;
 
 namespace PickupBlocks
 {
@@ -32,7 +33,7 @@ namespace PickupBlocks
                 var mi = t.GetMethod("GetBlockActivationCommands");
                 if(mi.DeclaringType == t)
                 {
-                    Dbgl($"Patching {t.Name}");
+                    Dbgl($"Patching {t.Name}.GetBlockActivationCommands");
                     harmony.Patch(
                         mi,
                         postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(GetBlockActivationCommands))
@@ -43,20 +44,22 @@ namespace PickupBlocks
                     {
                         foreach(var p in mi.GetParameters())
                         {
-                            if(p.Name == "_cIdx")
+                            if (p.Name == "_cIdx")
                             {
                                 harmony.Patch(
                                     mi,
                                     new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedOne))
                                 );
+                                Dbgl($"Patching {t.Name}.OnBlockActivated");
                                 break;
                             }
-                            if(p.Name == "_clrIdx")
+                            if (p.Name == "_clrIdx")
                             {
                                 harmony.Patch(
                                     mi,
                                     new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedTwo))
                                 );
+                                Dbgl($"Patching {t.Name}.OnBlockActivated");
                                 break;
                             }
                         }
@@ -64,10 +67,21 @@ namespace PickupBlocks
                     mi = t.GetMethod("GetActivationText");
                     if (mi.DeclaringType == t)
                     {
+                        Dbgl($"Patching {t.Name}.GetActivationText");
                         harmony.Patch(
-                            mi,
-                            new HarmonyMethod(typeof(PickupBlocks), nameof(GetActivationText_Prefix)),
-                            new HarmonyMethod(typeof(PickupBlocks), nameof(GetActivationText_Postfix))
+                            original: mi,
+                            prefix: new HarmonyMethod(typeof(PickupBlocks), nameof(TempCanPickup_Prefix)),
+                            postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(TempCanPickup_Postfix))
+                        );
+                    }
+                    mi = t.GetMethod("HasBlockActivationCommands");
+                    if (mi.DeclaringType == t)
+                    {
+                        Dbgl($"Patching {t.Name}.HasBlockActivationCommands");
+                        harmony.Patch(
+                            original: mi,
+                            prefix: new HarmonyMethod(typeof(PickupBlocks), nameof(TempCanPickup_Prefix)),
+                            postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(TempCanPickup_Postfix))
                         );
                     }
                 }
@@ -97,7 +111,7 @@ namespace PickupBlocks
             TakeBlock(_world, _clrIdx, _blockPos, _blockValue, _player);
             return false;
         }
-        private static void GetActivationText_Prefix(Block __instance, ref bool __state, WorldBase _world, Vector3i _blockPos)
+        private static void TempCanPickup_Prefix(Block __instance, ref bool __state, WorldBase _world, Vector3i _blockPos)
         {
             if (!config.modEnabled)
                 return;
@@ -106,32 +120,13 @@ namespace PickupBlocks
                 __instance.CanPickup = CheckCanPickup(_world, _blockPos);
 
         }
-        private static void GetActivationText_Postfix(Block __instance, bool __state)
+        private static void TempCanPickup_Postfix(Block __instance, bool __state)
         {
             if (!config.modEnabled)
                 return;
             __instance.CanPickup = __state;
         }
 
-        public static void SaveConfig()
-        {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
-            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
-        }
-        public void LoadConfig()
-        {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
-            if (File.Exists(path)) 
-            { 
-                config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
-            }
-            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
-        }
-        public static void Dbgl(object str, bool prefix = true)
-        {
-            if (config.isDebug)
-                Debug.Log((prefix ? mod.Name + " " : "") + str);
-        }
         private static void AddTakeCommand(WorldBase _world, Vector3i _blockPos, List<BlockActivationCommand> temp)
         {
             bool enabled = CheckCanPickup(_world, _blockPos);
@@ -201,37 +196,51 @@ namespace PickupBlocks
                     GameManager.Instance.ClearTooltips(___m_World.GetPrimaryPlayer().PlayerUI.nguiWindowManager);
                     if (!config.modEnabled)
                     {
-                        if (config.RestrictBlocksToLandClaimArea)
-                        {
-                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionEnabledText);
-                        }
-                        else
-                        {
-                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionDisabledText);
-                        }
                         config.modEnabled = true;
+                        config.RestrictBlocksToLandClaimArea = true;
+                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionEnabledText);
                     }
                     else if (config.AllowToggleLandClaimRestriction)
                     {
-                        if (!config.RestrictBlocksToLandClaimArea)
+                        if (config.RestrictBlocksToLandClaimArea)
+                        {
+                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText);
+                            config.RestrictBlocksToLandClaimArea = false;
+                        }
+                        else
                         {
                             GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText);
                             config.RestrictBlocksToLandClaimArea = true;
                             config.modEnabled = false;
                         }
-                        else
-                        {
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText);
-                            config.RestrictBlocksToLandClaimArea = false;
-                        }
                     }
                     else 
                     {
                         config.modEnabled = false;
+                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText);
                     }
                     SaveConfig();
                 }
             }
+        }
+        public static void SaveConfig()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
+        public void LoadConfig()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            if (File.Exists(path))
+            {
+                config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
+            }
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
+        public static void Dbgl(object str, bool prefix = true)
+        {
+            if (config.isDebug)
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
     }
 }
