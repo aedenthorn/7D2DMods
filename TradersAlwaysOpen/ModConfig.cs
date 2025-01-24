@@ -14,6 +14,7 @@ namespace UnrestrictedTraderAccess
         public string damageProtectionEnabledText = "Trader damage protection enabled";
         public string[] alwaysAllowDamageTypes = { "blockNameHere", "blockPrefixHere*" };
         public string toggleKey = "[0]";
+        public string locationDamageSuffix = " (!)";
 
     }
 }

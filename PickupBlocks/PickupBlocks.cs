@@ -193,23 +193,22 @@ namespace PickupBlocks
                 if (AedenthornUtils.CheckKeyDown(config.ToggleModKey))
                 {
                     Dbgl($"Pressed mod toggle key");
-                    GameManager.Instance.ClearTooltips(___m_World.GetPrimaryPlayer().PlayerUI.nguiWindowManager);
                     if (!config.modEnabled)
                     {
                         config.modEnabled = true;
                         config.RestrictBlocksToLandClaimArea = true;
-                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionEnabledText);
+                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionEnabledText, true);
                     }
                     else if (config.AllowToggleLandClaimRestriction)
                     {
                         if (config.RestrictBlocksToLandClaimArea)
                         {
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText);
+                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText, true);
                             config.RestrictBlocksToLandClaimArea = false;
                         }
                         else
                         {
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText);
+                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText, true);
                             config.RestrictBlocksToLandClaimArea = true;
                             config.modEnabled = false;
                         }
@@ -217,7 +216,7 @@ namespace PickupBlocks
                     else 
                     {
                         config.modEnabled = false;
-                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText);
+                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText, true);
                     }
                     SaveConfig();
                 }

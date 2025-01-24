@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics;
 using Path = System.IO.Path;
 
 namespace QuickStore
@@ -62,18 +63,44 @@ namespace QuickStore
                 if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
                     return;
 
-                if (AedenthornUtils.CheckKeyDown(config.storeKey))
+                if(config.storeKey == config.pullKey)
+                {
+                    if (AedenthornUtils.CheckKeyDown(config.storeKey))
+                    {
+                        if(string.IsNullOrEmpty(config.storeModKey))
+                        {
+                            if (AedenthornUtils.CheckKeyHeld(config.pullModKey))
+                            {
+                                Dbgl($"Pressed pull key");
+                                PullItems(___m_World);
+                            }
+                            else
+                            {
+                                Dbgl($"Pressed store key");
+                                StoreItems(___m_World);
+                            }
+                        }
+                        else if (AedenthornUtils.CheckKeyDown(config.storeModKey))
+                        {
+                            Dbgl($"Pressed store key");
+                            StoreItems(___m_World);
+                        }
+                        else if ( AedenthornUtils.CheckKeyHeld(config.pullModKey))
+                        {
+                            Dbgl($"Pressed pull key");
+                            PullItems(___m_World);
+                        }
+                    }
+                }
+                else if (AedenthornUtils.CheckKeyDown(config.storeKey) && AedenthornUtils.CheckKeyHeld(config.storeModKey))
                 {
                     Dbgl($"Pressed store key");
-                    if (AedenthornUtils.CheckKeyHeld(config.modKey))
-                    {
-                        Dbgl($"mod key held");
-                        PullItems(___m_World);
-                    }
-                    else
-                    {
-                        StoreItems(___m_World);
-                    }
+                    StoreItems(___m_World);
+                }
+                else if (AedenthornUtils.CheckKeyDown(config.pullKey) && AedenthornUtils.CheckKeyHeld(config.pullModKey))
+                {
+                    Dbgl($"Pressed pull key");
+                    PullItems(___m_World);
                 }
             }
         }
@@ -121,20 +148,23 @@ namespace QuickStore
             storageList.Sort(delegate (Vector3i a, Vector3i b) {
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });
-            Dbgl($"Got {storageList.Count} storages");
-            int count = 0;
-            var items = world.GetPrimaryPlayer().bag.GetSlots();
-            for (int i = 0; i < items.Length; i++)
+            Dbgl($"Got {storageList.Count} storages"); 
+            
+            Dictionary<int, int> dict = new Dictionary<int, int>();
+            var bag = world.GetPrimaryPlayer().bag;
+            ItemStack[] slots = bag.GetSlots();
+
+            for (int i = config.skipSlots; i < slots.Length; i++)
             {
-                if (items[i].IsEmpty())
+                if (slots[i].IsEmpty())
                     continue;
-                var initItem = items[i].Clone(); 
+                var initItem = slots[i].Clone();
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
                 if (config.storeIgnore.Length > 0)
                 {
                     foreach (var s in config.storeIgnore)
                     {
-                        if (itemName.Equals(s) || (s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))))
+                        if ((s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))) || itemName.Equals(s))
                         {
                             Dbgl($"Ignoring {itemName} from config");
                             goto next;
@@ -143,32 +173,48 @@ namespace QuickStore
                 }
                 foreach (var v in storageList)
                 {
-                    if (Array.Exists(storageDict[v].items, e => e.itemValue.type == items[i].itemValue.type))
+                    if (Array.Exists(storageDict[v].items, s => s.itemValue.type == initItem.itemValue.type))
                     {
-                        if ((storageDict[v].TryStackItem(0, items[i]).anyMoved && items[i].count == 0) || storageDict[v].AddItem(items[i]))
+                        storageDict[v].TryStackItem(0, slots[i]);
+                        if (slots[i].count > 0)
                         {
-                            items[i].Clear();
-                            storageDict[v].SetModified();
-                            count++;
+                            if (storageDict[v].AddItem(slots[i]))
+                                slots[i].count = 0;
                         }
-                        if (initItem.count > items[i].count)
+                        int moved = initItem.count - slots[i].count;
+                        if(moved > 0)
                         {
+                            bag.onBackpackChanged();
                             storageDict[v].SetModified();
+                            if (dict.ContainsKey(initItem.itemValue.type))
+                            {
+                                dict[initItem.itemValue.type] += moved;
+                            }
+                            else
+                            {
+                                dict[initItem.itemValue.type] = moved;
+                            }
                         }
-                        if (items[i].IsEmpty())
+                        if (slots[i].count == 0)
+                        {
+                            slots[i].Clear();
                             break;
+                        }
                     }
-                }
-                if (items[i].count < initItem.count)
-                {
-                    Dbgl($"Stored {initItem.count - items[i].count} of item {itemName}");
-
-                    world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(initItem.itemValue, items[i].count - initItem.count), false);
                 }
             next:
                 continue;
             }
-            Dbgl($"Stored {count} items");
+
+            foreach (var kvp in dict)
+            {
+                var itemName = ItemClass.GetForId(kvp.Key).Name;
+
+                Dbgl($"Stored {kvp.Value} of item {itemName}");
+                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(kvp.Key), -kvp.Value), false);
+            }
+
+            Dbgl($"Stored {dict.Count} items");
         }
         private static void PullItems(World world)
         {
@@ -215,48 +261,88 @@ namespace QuickStore
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });
             Dbgl($"Got {storageList.Count} storages");
-            int count = 0;
+            
+            Dictionary<int, int> dict = new Dictionary<int, int>();
             var bag = world.GetPrimaryPlayer().bag;
-            var items = bag.GetSlots();
-            for (int i = 0; i < items.Length; i++)
+            var slots = bag.GetSlots();
+            var toolbelt = world.GetPrimaryPlayer().inventory;
+            var tslots = toolbelt.GetSlots();
+            
+            for (int i = 0; i < slots.Length + tslots.Length; i++)
             {
-                if (items[i].IsEmpty())
+                int idx = i;
+                ItemStack slot;
+                if(idx < slots.Length)
+                    slot = slots[idx];
+                else
+                {
+                    idx -= slots.Length;
+                    slot = tslots[idx];
+                }
+                if (slot.IsEmpty() || ItemClass.GetForId(slot.itemValue.type).Stacknumber.Value == slot.count)
                     continue;
-                var initItem = items[i].Clone();
-                var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
+
+                var itemName = ItemClass.GetForId(slot.itemValue.type).Name;
+
                 if (config.pullIgnore.Length > 0)
                 {
                     foreach (var s in config.pullIgnore)
                     {
-                        if (itemName.Equals(s) || (s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))))
+                        if ((s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))) || itemName.Equals(s))
                         {
                             Dbgl($"Ignoring {itemName} from config");
-                            goto cont;
+                            goto next;
                         }
                     }
                 }
                 foreach (var v in storageList)
                 {
-                    var slots = storageDict[v].items.Where(stack => stack.CanStackPartlyWith(items[i]));
-                    if (slots.Any())
+                    for (int j = storageDict[v].items.Length - 1; j >= 0; j--)
                     {
-                        for(int j = 0; j < slots.Count(); j++)
+                        var item = storageDict[v].items[j];
+                        if (item.IsEmpty())
+                            continue;
+
+                        var initItem = storageDict[v].items[j].Clone();
+                        int num = storageDict[v].items[j].count;
+                        if (storageDict[v].items[j].itemValue.type == slot.itemValue.type && slot.CanStackPartly(ref num))
                         {
-                            if (!bag.TryStackItem(0, slots.ElementAt(j)).anyMoved)
-                                goto next;
+                            storageDict[v].items[j].count -= num;
+                            if(i < slots.Length)
+                            {
+                                slots[idx].count += num;
+                                bag.onBackpackChanged();
+                            }
+                            else
+                            {
+                                tslots[idx].count += num;
+                                toolbelt.onInventoryChanged();
+                            }
+                            storageDict[v].SetModified();
+                            int moved = initItem.count - storageDict[v].items[j].count;
+                            if (dict.ContainsKey(initItem.itemValue.type))
+                            {
+                                dict[initItem.itemValue.type] += moved;
+                            }
+                            else
+                            {
+                                dict[initItem.itemValue.type] = moved;
+                            }
                         }
                     }
                 }
             next:
-                if (items[i].count > initItem.count)
-                {
-                    Dbgl($"Pulled {items[i].count - initItem.count} of item {itemName}");
-                    world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(initItem.itemValue, items[i].count - initItem.count), false);
-                }
-            cont: 
                 continue;
             }
-            Dbgl($"Stored {count} items");
+            foreach(var kvp in dict)
+            {
+                var itemName = ItemClass.GetForId(kvp.Key).Name;
+
+                Dbgl($"Pulled {kvp.Value} of item {itemName}");
+                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(kvp.Key), kvp.Value), false);
+            }
+
+            Dbgl($"Pulled {dict.Count} items");
         }
     }
 }

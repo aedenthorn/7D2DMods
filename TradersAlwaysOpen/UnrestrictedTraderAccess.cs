@@ -89,8 +89,24 @@ namespace UnrestrictedTraderAccess
                     Dbgl($"Pressed toggle key");
                     LoadConfig();
                     config.removeDamageProtection = !config.removeDamageProtection;
-                    GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.removeDamageProtection ? config.damageProtectionDisabledText : config.damageProtectionEnabledText);
+                    GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.removeDamageProtection ? config.damageProtectionDisabledText : config.damageProtectionEnabledText, true);
                     SaveConfig();
+                    var xui = ___m_World.GetPrimaryPlayer().PlayerUI.xui;
+                    if (xui == null)
+                    {
+                        Dbgl($"no xui");
+                    }
+                    else
+                    {
+                        var window = xui.GetWindowByType<XUiC_Location>();
+                        if (window == null)
+                        {
+                            Dbgl($"no window");
+                        }
+                        else { 
+                            window.RefreshBindings(true);
+                        }
+                    }
                 }
             }
         }
@@ -431,6 +447,18 @@ namespace UnrestrictedTraderAccess
                     return true;
                 __result = false;
                 return false;
+            }
+        }
+        
+        [HarmonyPatch(typeof(XUiC_Location), nameof(XUiC_Location.GetBindingValue))]
+        static class XUiC_Location_GetBindingValue_Patch
+        {
+
+            static void Postfix(XUiC_Location __instance, ref string _value, string _bindingName)
+            {
+                if (!config.modEnabled || !config.removeDamageProtection || _bindingName != "locationname" || __instance.lastPrefab == null || !__instance.lastPrefab.PrefabName.StartsWith("trader_"))
+                    return;
+                _value += config.locationDamageSuffix;
             }
         }
 
