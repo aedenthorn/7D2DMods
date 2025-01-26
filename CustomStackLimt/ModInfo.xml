@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="CustomStackLimits" />
+  <DisplayName value="Custom Stack Limits" />
+  <Description value="Lets you set default and custom stack limits." />
+	<Author value="aedenthorn" />
+	<Version value="0.2.0" />
+</xml>

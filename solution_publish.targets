@@ -67,6 +67,11 @@
       <HintPath>$(ManagedDataPath)\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="InControl">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ManagedDataPath)\InControl.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="netstandard">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(ManagedDataPath)\netstandard.dll</HintPath>

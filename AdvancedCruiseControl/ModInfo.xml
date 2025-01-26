@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="AdvancedCruiseControl" />
+  <DisplayName value="Advanced Cruise Control" />
+  <Description value="Enable cruise control for vehicles." />
+	<Author value="aedenthorn" />
+	<Version value="0.2.1" />
+</xml>

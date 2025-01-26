@@ -316,8 +316,9 @@ namespace RemoteStorageAccess
                 var cc = world.ChunkClusters[i];
 
                 Dbgl($"cc has {cc.chunks.dict.Count} chunks");
-                foreach (var c in cc.chunks.dict.Values)
+                foreach (var key in cc.chunks.dict.Keys.ToArray())
                 {
+                    var c= cc.chunks.dict[key];
                     c.EnterReadLock();
                     foreach (var kvp in c.tileEntities.dict)
                     {

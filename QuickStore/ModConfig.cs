@@ -1,5 +1,5 @@
 ﻿
-namespace QuickStore
+namespace QuickStorage
 {
     public class ModConfig
     {

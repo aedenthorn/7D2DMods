@@ -13,7 +13,7 @@ using UnityEngine.UIElements;
 using static Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics;
 using Path = System.IO.Path;
 
-namespace QuickStore
+namespace QuickStorage
 {
     public class QuickStorage : IModApi
     {
@@ -152,11 +152,12 @@ namespace QuickStore
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
             var bag = world.GetPrimaryPlayer().bag;
+            var ctrl = ((XUiWindowGroup)world.GetPrimaryPlayer().PlayerUI.windowManager.GetWindow("backpack")).Controller.GetChildByType<XUiC_Backpack>();
             ItemStack[] slots = bag.GetSlots();
 
             for (int i = config.skipSlots; i < slots.Length; i++)
             {
-                if (slots[i].IsEmpty())
+                if (slots[i].IsEmpty() || ctrl.itemControllers[i].userLockedSlot)
                     continue;
                 var initItem = slots[i].Clone();
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
