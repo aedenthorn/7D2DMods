@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="QuickHarvest" />
+  <DisplayName value="Quick Harvest" />
+  <Description value="Lets you quickly harvest nearby crops." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>

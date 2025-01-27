@@ -90,7 +90,6 @@ namespace AdvancedCruiseControl
                     return;
                 if (__instance.AttachedToEntity == null || !cruiseVehicles.Contains(__instance.AttachedToEntity.GetType()))
                 {
-
                     currentTurboState = false;
                     currentCruiseAccel = 0;
                     currentCruiseState = CruiseState.coasting;

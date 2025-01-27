@@ -1,12 +1,12 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
-using Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 using UnityEngine;
 using Path = System.IO.Path;
@@ -71,14 +71,32 @@ namespace CustomStackLimit
                 __instance.Stacknumber = new DataItem<int>(Mathf.RoundToInt(__instance.Stacknumber.Value * config.defaultMult)); 
             }
         }
-        [HarmonyPatch(typeof(ItemClass), nameof(ItemClass.LateInit))]
+        [HarmonyPatch(typeof(ItemStack), nameof(ItemStack.CanStackWith))]
+        static class ItemStack_CanStackWith_Patch
+        {
+            static void Postfix(ItemStack __instance, ItemStack _other, ref bool __result)
+            {
+                if (!config.modEnabled || !__result)
+                    return;
+                if (__instance.itemValue != null && _other.itemValue != null && __instance.itemValue.HasQuality && _other.itemValue.HasQuality)
+                {
+                    if(__instance.itemValue.Quality != _other.itemValue.Quality)
+                        __result = false;
+                    else if (__instance.itemValue.Modifications.Length > 0 || _other.itemValue.Modifications.Length > 0)
+                        __result = false;
+                    else if (__instance.itemValue.UseTimes != _other.itemValue.UseTimes)
+                        __result = false;
+                } 
+            }
+        }
+        //[HarmonyPatch(typeof(ItemClass), nameof(ItemClass.LateInit))]
         static class ItemClass_LateInit_Patch
         {
             static void Postfix(ItemClass __instance)
             {
                 if (!config.modEnabled || !__instance.HasQuality)
                     return;
-                __instance.Stacknumber = new DataItem<int>(Mathf.RoundToInt(__instance.Stacknumber.Value * config.qualityMult)); 
+                //__instance.Stacknumber = new DataItem<int>(Mathf.RoundToInt(__instance.Stacknumber.Value * config.qualityMult)); 
             }
         }
         [HarmonyPatch(typeof(ItemClassesFromXml), nameof(ItemClassesFromXml.CreateItemsFromBlocks))]

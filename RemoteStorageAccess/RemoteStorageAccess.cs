@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
 using Platform;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,6 +32,7 @@ namespace RemoteStorageAccess
         public static RemoteStorageAccess context;
         public static Mod mod;
         public static bool openingStorage;
+        public static bool openingStorage2;
 
         public void InitMod(Mod modInstance)
         {
@@ -64,7 +66,7 @@ namespace RemoteStorageAccess
 
         public static void Dbgl(object str, bool prefix = true)
         {
-            if(config.isDebug)
+            if (config.isDebug)
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
@@ -117,7 +119,7 @@ namespace RemoteStorageAccess
                     if (elapsedTime > config.pollInterval)
                     {
                         elapsedTime = 0;
-                        ReloadStorages();
+                        ReloadStorages(true);
                         return;
                     }
                 }
@@ -172,7 +174,7 @@ namespace RemoteStorageAccess
                         else
                             currentStorage = sortedStorageList[i + 1];
                         OpenStorage();
-                        
+
                     }
                     else if (AedenthornUtils.CheckKeyDown(config.openPrevKey))
                     {
@@ -194,7 +196,7 @@ namespace RemoteStorageAccess
             }
 
         }
-
+        
         [HarmonyPatch(typeof(XUiC_LootWindowGroup), nameof(XUiC_LootWindowGroup.SetTileEntityChest))]
         static class XUiC_LootWindowGroup_SetTileEntityChest_Patch
         {
@@ -293,18 +295,20 @@ namespace RemoteStorageAccess
         {
             if (sortedStorageList.Count > 0)
             {
-                Dbgl($"Opening storage at {currentStorage}; is server {SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer}");
                 openingStorage = true;
+                openingStorage2 = true;
                 GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
                 GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, GameManager.Instance.World.GetPrimaryPlayer().entityId, "container");
+
             }
         }
-        public static void ReloadStorages()
+        public static void ReloadStorages(bool polling = false)
         {
             var world = GameManager.Instance?.World;
             if (world == null)
                 return;
-            Dbgl($"Loading storages, {world.ChunkClusters.Count} ccs");
+            if(!polling)
+                Dbgl($"Loading storages, {world.ChunkClusters.Count} ccs");
 
             var pos = world.GetPrimaryPlayer().position;
 
@@ -315,7 +319,8 @@ namespace RemoteStorageAccess
 
                 var cc = world.ChunkClusters[i];
 
-                Dbgl($"cc has {cc.chunks.dict.Count} chunks");
+                if (!polling)
+                    Dbgl($"cc has {cc.chunks.dict.Count} chunks");
                 foreach (var key in cc.chunks.dict.Keys.ToArray())
                 {
                     var c= cc.chunks.dict[key];
@@ -358,7 +363,8 @@ namespace RemoteStorageAccess
 
                 }
             }
-            Dbgl($"Got {currentStorageDict.Count} storages");
+            if (!polling)
+                Dbgl($"Got {currentStorageDict.Count} storages");
             sortedStorageList = new List<Vector3i>(currentStorageDict.Keys.ToArray());
             sortedStorageList.Sort(delegate (Vector3i a, Vector3i b) { 
                 if(nameDict[ToXYZ(a)] != "" && nameDict[ToXYZ(b)] != "")
@@ -375,6 +381,68 @@ namespace RemoteStorageAccess
                 }
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });
+        }
+
+        [HarmonyPatch(typeof(FlexibleCursor), nameof(FlexibleCursor.SetNavigationTarget))]
+        static class FlexibleCursor_SetNavigationTarget_Patch
+        {
+            static bool Prefix()
+            {
+                return false;
+
+                if (openingStorage)
+                {
+                    openingStorage = false;
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(FlexibleCursor), nameof(FlexibleCursor.SetNavigationTargetLater))]
+        static class FlexibleCursor_SetNavigationTargetLater_Patch
+        {
+            static bool Prefix()
+            {
+                return false;
+
+                if (openingStorage2)
+                {
+                    openingStorage2 = false;
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(SoftCursor), nameof(SoftCursor.SetNavigationTarget))]
+        static class SoftCursor_SetNavigationTarget_Patch
+        {
+            static bool Prefix()
+            {
+                return false;
+
+                if (openingStorage)
+                {
+                    openingStorage = false;
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(SoftCursor), nameof(SoftCursor.SetNavigationTargetLater))]
+        static class SoftCursor_SetNavigationTargetLater_Patch
+        {
+            static bool Prefix()
+            {
+                return false;
+
+                if (openingStorage2)
+                {
+                    openingStorage2 = false;
+                    return false;
+                }
+                return true;
+            }
         }
 
         public static string ToXYZ(Vector3i v)

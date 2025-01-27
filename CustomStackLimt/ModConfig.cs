@@ -7,9 +7,8 @@ namespace CustomStackLimit
     {
         public bool modEnabled = true;
         public bool isDebug = true;
-        public float defaultMult = 1;
-        public float customMult = 1;
-        public float qualityMult = 1;
+        public float defaultMult = 5;
+        public float customMult = 5;
         public Dictionary<string, string> namedMult = new Dictionary<string, string>()
         {
             { "itemNameHere", "500" },
