@@ -2,7 +2,7 @@
 <xml>
   <Name value="RemoteStorageAccess" />
   <DisplayName value="Remote Storage Access" />
-  <Version value="1.1.1" />
+  <Version value="1.2.0" />
   <Description value="Lets you access nearby containers remotely." />
   <Author value="aedenthorn" />
 </xml>

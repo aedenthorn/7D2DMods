@@ -178,6 +178,8 @@ namespace QuickHarvest
                                                 {
                                                     foreach (var r in CraftingManager.GetRecipes(seedValue.ItemClass.Name))
                                                     {
+                                                        if (!r.IsUnlocked(player))
+                                                            continue;
                                                         //Dbgl($"got replacement {seedValue.ItemClass.Name} recipe with {r.ingredients.Count} ing; first is {r.ingredients[0].count} {r.ingredients[0].itemValue.ItemClass.Name}");
                                                         if (r.ingredients.Count == 1 && r.ingredients[0].itemValue.type == itemValue.type && itemsToCollect >= r.ingredients[0].count)
                                                         {
