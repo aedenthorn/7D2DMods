@@ -21,7 +21,9 @@ namespace RemoteStorageAccess
         public static Dictionary<Vector3i, StorageData> currentStorageDict = new Dictionary<Vector3i, StorageData>();
         public static Dictionary<Vector3i, StorageData> knownStorageDict = new Dictionary<Vector3i, StorageData>();
         public static Vector3i currentStorage;
+        public static int currentVehicleStorage = -1;
         public static Dictionary<string, string> nameDict = new Dictionary<string, string>();
+        public static List<EntityVehicle> vehicleList = new List<EntityVehicle>();
         public static bool showingList;
         public static string nameDictPath;
         public static float elapsedTime;
@@ -31,8 +33,6 @@ namespace RemoteStorageAccess
         public static ModConfig config;
         public static RemoteStorageAccess context;
         public static Mod mod;
-        public static bool openingStorage;
-        public static bool openingStorage2;
 
         public void InitMod(Mod modInstance)
         {
@@ -127,19 +127,38 @@ namespace RemoteStorageAccess
                 if (AedenthornUtils.CheckKeyDown(config.openCurrentKey))
                 {
                     Dbgl($"Pressed open key");
-                    if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
+                    if(currentVehicleStorage > -1)
                     {
-                        ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                        if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
+                        {
+                            ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                        }
+                        else
+                        {
+                            ReloadStorages();
+                            if (vehicleList.Count == 0)
+                                return;
+                            if (currentVehicleStorage >= sortedStorageList.Count)
+                                currentVehicleStorage = 0;
+                            OpenVehicleStorage();
+                        }
                     }
                     else
                     {
-                        ReloadStorages();
-                        if (sortedStorageList.Count == 0)
-                            return;
-                        int i = sortedStorageList.IndexOf(currentStorage);
-                        if (i < 0 || i >= sortedStorageList.Count)
-                            currentStorage = sortedStorageList[0];
-                        OpenStorage();
+                        if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
+                        {
+                            ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                        }
+                        else
+                        {
+                            ReloadStorages();
+                            if (sortedStorageList.Count == 0)
+                                return;
+                            int i = sortedStorageList.IndexOf(currentStorage);
+                            if (i < 0 || i >= sortedStorageList.Count)
+                                currentStorage = sortedStorageList[0];
+                            OpenStorage();
+                        }
                     }
                 }
                 else if (AedenthornUtils.CheckKeyDown(config.openWindowKey))
@@ -169,8 +188,21 @@ namespace RemoteStorageAccess
                         if (sortedStorageList.Count == 0)
                             return;
                         int i = sortedStorageList.IndexOf(currentStorage);
-                        if (i < 0 || i >= sortedStorageList.Count - 1)
+                        if (i < 0)
                             currentStorage = sortedStorageList[0];
+                        else if (i >= sortedStorageList.Count - 1)
+                        {
+                            if(vehicleList.Count > 0)
+                            {
+                                currentVehicleStorage = 0;
+                                OpenVehicleStorage();
+                                return;
+                            }
+                            else
+                            {
+                                currentStorage = sortedStorageList[0];
+                            }
+                        }
                         else
                             currentStorage = sortedStorageList[i + 1];
                         OpenStorage();
@@ -186,10 +218,78 @@ namespace RemoteStorageAccess
                         if (i < 0)
                             currentStorage = sortedStorageList[0];
                         else if (i == 0)
-                            currentStorage = sortedStorageList[sortedStorageList.Count - 1];
+                        {
+                            if (vehicleList.Count > 0)
+                            {
+                                currentVehicleStorage = vehicleList.Count - 1;
+                                OpenVehicleStorage();
+                                return;
+                            }
+                            else
+                            {
+                                currentStorage = sortedStorageList[sortedStorageList.Count - 1];
+                            }
+                        }
                         else
                             currentStorage = sortedStorageList[i - 1];
                         OpenStorage();
+
+                    }
+                }
+                else if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
+                {
+                    if (AedenthornUtils.CheckKeyDown(config.openNextKey))
+                    {
+                        Dbgl($"Pressed next key");
+                        ReloadStorages();
+                        if (vehicleList.Count == 0)
+                            return;
+                        if (currentVehicleStorage < 0)
+                            currentVehicleStorage = 0;
+                        else if (currentVehicleStorage >= vehicleList.Count - 1)
+                        {
+                            if (sortedStorageList.Count > 0)
+                            {
+                                currentVehicleStorage = -1;
+                                currentStorage = sortedStorageList[0];
+                                OpenStorage();
+                                return;
+                            }
+                            else
+                            {
+                                currentVehicleStorage = 0;
+                            }
+                        }
+                        else
+                            currentVehicleStorage++;
+                        OpenVehicleStorage();
+
+                    }
+                    else if (AedenthornUtils.CheckKeyDown(config.openPrevKey))
+                    {
+                        Dbgl($"Pressed prev key");
+                        ReloadStorages();
+                        if (vehicleList.Count == 0)
+                            return;
+                        if (currentVehicleStorage < 0)
+                            currentVehicleStorage = 0;
+                        else if (currentVehicleStorage == 0)
+                        {
+                            if (sortedStorageList.Count > 0)
+                            {
+                                currentVehicleStorage = -1;
+                                currentStorage = sortedStorageList[sortedStorageList.Count - 1];
+                                OpenStorage();
+                                return;
+                            }
+                            else
+                            {
+                                currentVehicleStorage = vehicleList.Count - 1;
+                            }
+                        }
+                        else
+                            currentVehicleStorage--;
+                        OpenVehicleStorage();
 
                     }
                 }
@@ -235,6 +335,33 @@ namespace RemoteStorageAccess
                 return codes.AsEnumerable();
             }
         }
+        [HarmonyPatch(typeof(EntityVehicle), nameof(EntityVehicle.CheckUIInteraction))]
+        static class EntityVehicle_CheckUIInteraction_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling EntityVehicle.CheckUIInteraction");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if ( i < codes.Count - 3 && codes[i].opcode == OpCodes.Ldc_I4_0 && codes[i + 1].opcode == OpCodes.Ret && codes[i + 2].opcode == OpCodes.Ldc_I4_1 && codes[i + 3].opcode == OpCodes.Ret)
+                    {
+                        Dbgl($"Overriding max distance to keep vehicle storage window open");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.OverrideVehicleDistance))));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+
+        private static bool OverrideVehicleDistance(bool result)
+        {
+            if(!config.modEnabled) return result;
+            return true;
+        }
+
         [HarmonyPatch(typeof(BlockSecureLoot), nameof(BlockSecureLoot.GetActivationText))]
         static class BlockSecureLoot_GetActivationText_Patch
         {
@@ -293,12 +420,22 @@ namespace RemoteStorageAccess
 
         public static void OpenStorage()
         {
+
             if (sortedStorageList.Count > 0)
             {
-                openingStorage = true;
-                openingStorage2 = true;
-                GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
                 GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, GameManager.Instance.World.GetPrimaryPlayer().entityId, "container");
+
+            }
+        }
+        public static void OpenVehicleStorage()
+        {
+
+            if (vehicleList.Count > 0)
+            {
+                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
+                var ve = vehicleList[Mathf.Clamp(currentVehicleStorage, 0, vehicleList.Count - 1)];
+                ve.OnEntityActivated(9, ve.GetBlockPosition(), GameManager.Instance.World.GetPrimaryPlayer());
 
             }
         }
@@ -313,6 +450,7 @@ namespace RemoteStorageAccess
             var pos = world.GetPrimaryPlayer().position;
 
             currentStorageDict.Clear();
+            vehicleList.Clear();
             nameDict = File.Exists(nameDictPath) ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(nameDictPath)) : new Dictionary<string, string>();
             for(int i = 0; i < world.ChunkClusters.Count; i++)
             {
@@ -325,6 +463,24 @@ namespace RemoteStorageAccess
                 {
                     var c= cc.chunks.dict[key];
                     c.EnterReadLock();
+
+                    if (config.includeVehicles)
+                    {
+                        foreach (var el in c.entityLists)
+                        {
+                            foreach(var entity in el)
+                            {
+                                if (entity is EntityVehicle)
+                                {
+                                    var ev = entity as EntityVehicle;
+                                    if (ev.LocalPlayerIsOwner() && ev.hasStorage())
+                                    {
+                                        vehicleList.Add(ev);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     foreach (var kvp in c.tileEntities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
@@ -364,7 +520,10 @@ namespace RemoteStorageAccess
                 }
             }
             if (!polling)
+            {
                 Dbgl($"Got {currentStorageDict.Count} storages");
+                Dbgl($"Got {vehicleList.Count} vehicles");
+            }
             sortedStorageList = new List<Vector3i>(currentStorageDict.Keys.ToArray());
             sortedStorageList.Sort(delegate (Vector3i a, Vector3i b) { 
                 if(nameDict[ToXYZ(a)] != "" && nameDict[ToXYZ(b)] != "")
@@ -382,69 +541,6 @@ namespace RemoteStorageAccess
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });
         }
-
-        [HarmonyPatch(typeof(FlexibleCursor), nameof(FlexibleCursor.SetNavigationTarget))]
-        static class FlexibleCursor_SetNavigationTarget_Patch
-        {
-            static bool Prefix()
-            {
-                return false;
-
-                if (openingStorage)
-                {
-                    openingStorage = false;
-                    return false;
-                }
-                return true;
-            }
-        }
-        [HarmonyPatch(typeof(FlexibleCursor), nameof(FlexibleCursor.SetNavigationTargetLater))]
-        static class FlexibleCursor_SetNavigationTargetLater_Patch
-        {
-            static bool Prefix()
-            {
-                return false;
-
-                if (openingStorage2)
-                {
-                    openingStorage2 = false;
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        [HarmonyPatch(typeof(SoftCursor), nameof(SoftCursor.SetNavigationTarget))]
-        static class SoftCursor_SetNavigationTarget_Patch
-        {
-            static bool Prefix()
-            {
-                return false;
-
-                if (openingStorage)
-                {
-                    openingStorage = false;
-                    return false;
-                }
-                return true;
-            }
-        }
-        [HarmonyPatch(typeof(SoftCursor), nameof(SoftCursor.SetNavigationTargetLater))]
-        static class SoftCursor_SetNavigationTargetLater_Patch
-        {
-            static bool Prefix()
-            {
-                return false;
-
-                if (openingStorage2)
-                {
-                    openingStorage2 = false;
-                    return false;
-                }
-                return true;
-            }
-        }
-
         public static string ToXYZ(Vector3i v)
         {
             return $"{v.x},{v.y},{v.z}";

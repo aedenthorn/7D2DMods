@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomStackLimits", "Custom
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuickHarvest", "QuickHarvest\QuickHarvest.csproj", "{79CDF2E8-0DD7-44FE-93D6-434D662F379F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeStatsTab", "RecipeStatsTab\RecipeStatsTab.csproj", "{56BC33D8-5D7C-4565-8C36-9EF7A7142D33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,10 @@ Global
 		{79CDF2E8-0DD7-44FE-93D6-434D662F379F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79CDF2E8-0DD7-44FE-93D6-434D662F379F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79CDF2E8-0DD7-44FE-93D6-434D662F379F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56BC33D8-5D7C-4565-8C36-9EF7A7142D33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56BC33D8-5D7C-4565-8C36-9EF7A7142D33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56BC33D8-5D7C-4565-8C36-9EF7A7142D33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56BC33D8-5D7C-4565-8C36-9EF7A7142D33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

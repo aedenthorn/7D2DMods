@@ -78,25 +78,73 @@ namespace CustomStackLimit
             {
                 if (!config.modEnabled || !__result)
                     return;
-                if (__instance.itemValue != null && _other.itemValue != null && __instance.itemValue.HasQuality && _other.itemValue.HasQuality)
+                try
                 {
-                    if(__instance.itemValue.Quality != _other.itemValue.Quality)
-                        __result = false;
-                    else if (__instance.itemValue.Modifications.Length > 0 || _other.itemValue.Modifications.Length > 0)
-                        __result = false;
-                    else if (__instance.itemValue.UseTimes != _other.itemValue.UseTimes)
-                        __result = false;
-                } 
+                    if (__instance.itemValue != null && _other.itemValue != null)
+                    {
+                        if (__instance.itemValue.Quality != _other.itemValue.Quality)
+                            __result = false;
+                        else if (__instance.itemValue.Modifications.Length > 0 || _other.itemValue.Modifications.Length > 0)
+                        {
+                            foreach(var i in __instance.itemValue.Modifications)
+                            {
+                                if (i != null)
+                                {
+                                    __result = false;
+                                    break;
+                                }
+                            }
+                            if (__result)
+                            {
+                                foreach (var i in _other.itemValue.Modifications)
+                                {
+                                    if (i != null)
+                                    {
+                                        __result = false;
+                                        break;
+                                    }
+                                }
+
+                            }
+                        }
+                        else if (__instance.itemValue.UseTimes != _other.itemValue.UseTimes)
+                            __result = false;
+                    }
+                }
+                catch { }
             }
         }
-        //[HarmonyPatch(typeof(ItemClass), nameof(ItemClass.LateInit))]
+
+        [HarmonyPatch(typeof(ItemClass), nameof(ItemClass.LateInit))]
         static class ItemClass_LateInit_Patch
         {
             static void Postfix(ItemClass __instance)
             {
                 if (!config.modEnabled || !__instance.HasQuality)
                     return;
-                //__instance.Stacknumber = new DataItem<int>(Mathf.RoundToInt(__instance.Stacknumber.Value * config.qualityMult)); 
+                __instance.Stacknumber = new DataItem<int>(Mathf.RoundToInt(__instance.Stacknumber.Value * config.qualityMult)); 
+            }
+        }
+        [HarmonyPatch(typeof(ItemValue), new Type[] { typeof(int), typeof(int), typeof(int), typeof(bool), typeof(string[]), typeof(float) })]
+        [HarmonyPatch(MethodType.Constructor)]
+        static class ItemValue_Patch
+        {
+
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling method ItemValue");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Ldfld && codes[i].operand is FieldInfo && (FieldInfo)codes[i].operand == AccessTools.Field(typeof(ItemClass), nameof(ItemClass.Stacknumber)) && codes[i + 2].opcode == OpCodes.Ldc_I4_1 && (codes[i + 3].opcode == OpCodes.Ble_S || codes[i + 3].opcode == OpCodes.Ble))
+                    {
+                        Dbgl($"\tremoving logic to skip checking for mod slots on stack limit > 1");
+                        codes[i + 3].opcode = OpCodes.Bge_S;
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
             }
         }
         [HarmonyPatch(typeof(ItemClassesFromXml), nameof(ItemClassesFromXml.CreateItemsFromBlocks))]
@@ -218,6 +266,8 @@ namespace CustomStackLimit
                     return GetDataItem(defaultData, kvp.Value);
                 }
             }
+            //if (defaultData.Value == 1)
+            //    return defaultData;
             foreach (var kvp in config.numberMult)
             {
                 int result;
@@ -253,5 +303,6 @@ namespace CustomStackLimit
             }
             return orig;
         }
+
     }
 }

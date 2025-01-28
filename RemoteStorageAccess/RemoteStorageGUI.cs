@@ -67,7 +67,7 @@ namespace RemoteStorageAccess
                     }))
                     {
                         RemoteStorageAccess.Dbgl($"Pressed button {i}");
-
+                        RemoteStorageAccess.currentVehicleStorage = -1;
                         File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
                         RemoteStorageAccess.currentStorage = RemoteStorageAccess.sortedStorageList[i];
                         RemoteStorageAccess.OpenStorage();
@@ -91,6 +91,32 @@ namespace RemoteStorageAccess
                 GUILayout.EndHorizontal();
                 if (i < RemoteStorageAccess.sortedStorageList.Count - 1)
                     GUILayout.Space(config.betweenSpace);
+            }
+            if(RemoteStorageAccess.sortedStorageList.Count > 0 && RemoteStorageAccess.vehicleList.Count > 0)
+                    GUILayout.Space(config.betweenSpace);
+            for (int i = 0; i < RemoteStorageAccess.vehicleList.Count; i++)
+            {
+                GUILayout.BeginHorizontal();
+                var color = GUI.backgroundColor;
+                if (RemoteStorageAccess.currentVehicleStorage == i && GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
+                {
+                    GUI.backgroundColor = new Color(config.currentColorR, config.currentColorG, config.currentColorB, config.currentColorA);
+                }
+                if (GUILayout.Button(Localization.Get(EntityClass.list[RemoteStorageAccess.vehicleList[i].entityClass].entityClassName), new GUILayoutOption[]{
+                        GUILayout.Width(config.buttonWidth),
+                        GUILayout.Height(config.buttonHeight)
+                    }))
+                {
+                    RemoteStorageAccess.Dbgl($"Pressed vehicle button {i}");
+                    File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
+                    RemoteStorageAccess.currentVehicleStorage = i;
+                    RemoteStorageAccess.OpenVehicleStorage();
+                }
+                GUI.backgroundColor = color;
+                GUILayout.EndHorizontal();
+                if (i < RemoteStorageAccess.vehicleList.Count - 1)
+                    GUILayout.Space(config.betweenSpace);
+
             }
             GUILayout.EndScrollView();
             GUILayout.EndVertical();

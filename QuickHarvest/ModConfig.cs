@@ -5,7 +5,8 @@ namespace QuickHarvest
     {
         public bool modEnabled = true;
         public bool isDebug = true;
-        public int blockRadius = 5;
+        public int blockRadius = 64;
+        public bool replaceCrop = true;
 
         public string harvestKey = "h";
         public string harvestModKey = "";

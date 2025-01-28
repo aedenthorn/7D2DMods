@@ -10,6 +10,7 @@ namespace RemoteStorageAccess
         public bool isDebug = true;
         public float pollInterval = 3;
         public float range = -1;
+        public bool includeVehicles = true;
 
         public string openCurrentKey = "[";
         public string openNextKey = "right";
@@ -35,6 +36,5 @@ namespace RemoteStorageAccess
         public string windowTitleText = "<b>Nearby Storage</b>";
         public int fontSize = 14;
         public string uiTitleText = "Nearby Storage";
-
     }
 }
