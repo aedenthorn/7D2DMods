@@ -64,7 +64,11 @@ namespace ShowRemainingToClear
                         {
                             if (sed.SleeperVolumes[i].respawnMap.Count == 0)
                             {
-                                sed.SleeperVolumes.RemoveAt(i);
+                                //Dbgl($"Empty respawnMap, removing sleeper volume; cleared {sed.SleeperVolumes[i].wasCleared}");
+
+                                //QuestEventManager.Current.SleeperVolumePositionRemoved(sed.SleeperVolumes[i].Center);
+
+                                //sed.SleeperVolumes.RemoveAt(i);
                             }
                         }
                         left = sed.SleeperVolumes.Count();

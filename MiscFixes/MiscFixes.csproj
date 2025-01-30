@@ -8,9 +8,6 @@
     <Compile Include="..\AedenthornUtils\AedenthornUtils.cs" Link="AedenthornUtils.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="bin\Debug\net480\Config\XUi\windows.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="ModInfo.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

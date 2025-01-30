@@ -127,39 +127,30 @@ namespace RemoteStorageAccess
                 if (AedenthornUtils.CheckKeyDown(config.openCurrentKey))
                 {
                     Dbgl($"Pressed open key");
-                    if(currentVehicleStorage > -1)
+                    if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting") || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
                     {
-                        if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
+                        ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                    }
+                    else
+                    {
+
+                        ReloadStorages();
+                        if (currentVehicleStorage > -1 && vehicleList.Count > 0)
                         {
-                            ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
-                        }
-                        else
-                        {
-                            ReloadStorages();
-                            if (vehicleList.Count == 0)
-                                return;
                             if (currentVehicleStorage >= sortedStorageList.Count)
                                 currentVehicleStorage = 0;
                             OpenVehicleStorage();
                         }
-                    }
-                    else
-                    {
-                        if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting"))
+                        else if(sortedStorageList.Count > 0)
                         {
-                            ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
-                        }
-                        else
-                        {
-                            ReloadStorages();
-                            if (sortedStorageList.Count == 0)
-                                return;
+                            
                             int i = sortedStorageList.IndexOf(currentStorage);
                             if (i < 0 || i >= sortedStorageList.Count)
                                 currentStorage = sortedStorageList[0];
                             OpenStorage();
                         }
                     }
+
                 }
                 else if (AedenthornUtils.CheckKeyDown(config.openWindowKey))
                 {
@@ -173,7 +164,7 @@ namespace RemoteStorageAccess
                     else
                     {
                         ReloadStorages();
-                        if (sortedStorageList.Count == 0)
+                        if (sortedStorageList.Count == 0 && vehicleList.Count == 0)
                             return;
                         Dbgl($"Opening window");
                         showingList = true;
@@ -185,7 +176,7 @@ namespace RemoteStorageAccess
                     {
                         Dbgl($"Pressed next key");
                         ReloadStorages();
-                        if (sortedStorageList.Count == 0)
+                        if (sortedStorageList.Count == 0 && vehicleList.Count == 0)
                             return;
                         int i = sortedStorageList.IndexOf(currentStorage);
                         if (i < 0)
@@ -296,7 +287,6 @@ namespace RemoteStorageAccess
             }
 
         }
-        
         [HarmonyPatch(typeof(XUiC_LootWindowGroup), nameof(XUiC_LootWindowGroup.SetTileEntityChest))]
         static class XUiC_LootWindowGroup_SetTileEntityChest_Patch
         {

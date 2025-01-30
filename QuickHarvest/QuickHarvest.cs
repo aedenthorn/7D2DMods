@@ -57,7 +57,7 @@ namespace QuickHarvest
 
             static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
+                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || LocalPlayerUI.AnyModalWindowOpen())
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.harvestKey) && AedenthornUtils.CheckKeyHeld(config.harvestModKey, false))
                 {
