@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="ToggleHoldingItem" />
+  <DisplayName value="Toggle Holding Item" />
+  <Description value="Lets you toggle held item." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>

@@ -92,12 +92,12 @@ namespace QuickStorage
                         }
                     }
                 }
-                else if (AedenthornUtils.CheckKeyDown(config.storeKey) && AedenthornUtils.CheckKeyHeld(config.storeModKey))
+                else if (AedenthornUtils.CheckKeyDown(config.storeKey) && AedenthornUtils.CheckKeyHeld(config.storeModKey, false))
                 {
                     Dbgl($"Pressed store key");
                     StoreItems(___m_World);
                 }
-                else if (AedenthornUtils.CheckKeyDown(config.pullKey) && AedenthornUtils.CheckKeyHeld(config.pullModKey))
+                else if (AedenthornUtils.CheckKeyDown(config.pullKey) && AedenthornUtils.CheckKeyHeld(config.pullModKey, false))
                 {
                     Dbgl($"Pressed pull key");
                     PullItems(___m_World);

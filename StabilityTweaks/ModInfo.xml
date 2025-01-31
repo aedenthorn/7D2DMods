@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="StabilityTweaks" />
+  <DisplayName value="Stability Tweaks" />
+  <Description value="Lets you adjust block stability." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>

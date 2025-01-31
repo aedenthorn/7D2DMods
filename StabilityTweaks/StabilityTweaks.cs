@@ -8,13 +8,13 @@ using System.Reflection;
 using UnityEngine;
 using Path = System.IO.Path;
 
-namespace MapTeleport
+namespace StabilityTweaks
 {
-    public class MapTeleport : IModApi
+    public class StabilityTweaks : IModApi
     {
 
         public static ModConfig config;
-        public static MapTeleport context;
+        public static StabilityTweaks context;
         public static Mod mod;
         public void InitMod(Mod modInstance)
         {
@@ -26,16 +26,26 @@ namespace MapTeleport
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
         }
-        [HarmonyPatch(typeof(World), nameof(World.SetupTraders))]
-        static class World_SetupTraders_Patch
+        [HarmonyPatch(typeof(World), nameof(World.AddFallingBlock))]
+        static class World_AddFallingBlocks_Patch
         {
 
-            static void Postfix()
+            static bool Prefix()
             {
-                if (!config.modEnabled || GameStats.GetBool(EnumGameStats.IsTeleportEnabled))
+                if (!config.modEnabled || config.stabilityModifier > 0)
+                    return true;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock))]
+        static class BlockValue_GetForceToOtherBlock_Patch
+        {
+
+            static void Postfix(ref int __result)
+            {
+                if (!config.modEnabled || config.stabilityModifier <= 0)
                     return;
-                Dbgl("Enabling teleport");
-                GameStats.SetObject(EnumGameStats.IsTeleportEnabled, true);
+                __result = Mathf.RoundToInt(__result * config.stabilityModifier);
             }
         }
 
