@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UIElements;
 
 namespace VehicleRadio
@@ -29,20 +30,22 @@ namespace VehicleRadio
                 foreach (var file in Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories))
                 {
                     string url = string.Format("file://{0}", file);
-                    WWW www = new WWW(url);
-                    yield return www;
-                    try
+                    using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.UNKNOWN))
                     {
-                        var clip = www.GetAudioClip(false, false);
-                        if (clip != null)
+                        yield return www.SendWebRequest();
+
+                        if (www.result == UnityWebRequest.Result.Success)
                         {
-                            clip.name = Path.GetFileNameWithoutExtension(file);
-                            station.tracks.Add(clip);
-                            station.length += clip.length;
+                            AudioClip clip = DownloadHandlerAudioClip.GetContent(www);
+                            if (clip != null)
+                            {
+                                clip.name = Path.GetFileNameWithoutExtension(file);
+                                station.tracks.Add(clip);
+                                station.length += clip.length;
+                            }
+
                         }
-                        
                     }
-                    catch { }
                 }
                 if(station.tracks.Count > 0)
                 {

@@ -7,7 +7,7 @@ namespace AdvancedCruiseControl
         public bool cruiseEnabled = true;
         public bool isDebug = true;
 
-        public string toggleKey = "c";
+        public string toggleKey = "x";
         public string accelKey = "up";
         public string decelKey = "down";
         public string toggleText = "Cruise enabled: {0}";

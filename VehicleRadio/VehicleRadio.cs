@@ -91,24 +91,17 @@ namespace VehicleRadio
                 {
                     if (rs.on)
                     {
-                        if (rs.autoToggle)
-                        {
-                            rs.on = false;
-                            rs.autoToggle = false;
-                            GetVehicleAudioSource((EntityVehicle)entityPlayerLocal.AttachedToEntity).Stop();
-                        }
-                        else
-                        {
-                            rs.autoToggle = true;
-                        }
+                        rs.on = false;
+                        GetVehicleAudioSource((EntityVehicle)entityPlayerLocal.AttachedToEntity).Stop();
                     }
                     else
                     {
                         rs.on = true;
                     }
-                    Dbgl($"Pressed radio key; enabled: {rs.on}, toggle {rs.autoToggle}");
+                    Dbgl($"Pressed radio key; enabled: {rs.on}");
+                    config.defaultOn = rs.on;
                     SaveConfig();
-                    GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), string.Format(config.toggleText, rs.on, rs.autoToggle), string.Empty, null, null, true);
+                    GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), string.Format(config.toggleText, rs.on), string.Empty, null, null, false);
                 }
                 else if (AedenthornUtils.CheckKeyDown(config.nextStationKey))
                 {
@@ -118,7 +111,7 @@ namespace VehicleRadio
                     {
                         rs.station = 0;
                     }
-                    SaveConfig();
+                    config.defaultStation = rs.station;
                     GetVehicleAudioSource((EntityVehicle)entityPlayerLocal.AttachedToEntity).Stop();
                 }
                 else if (AedenthornUtils.CheckKeyDown(config.prevStationKey))
@@ -155,34 +148,39 @@ namespace VehicleRadio
         {
             static void Postfix(EntityVehicle __instance)
             {
-                if (!config.modEnabled || stations.Count == 0)
+                if (!config.modEnabled || stations.Count == 0 || !__instance.LocalPlayerIsOwner() || (config.autoToggle && !__instance.HasDriver))
                 {
                     return;
                 }
                 var source = GetVehicleAudioSource(__instance);
                 var rs = source.GetComponent<RadioSwitch>();
 
-                if (rs.on && !source.isPlaying && (!rs.autoToggle || __instance.HasDriver))
+                if (rs.on && !source.isPlaying)
                 {
                     RadioStation station = stations[Mathf.Clamp(rs.station, 0, stations.Count - 1)];
                     float offset =  (station.randomStart + Time.realtimeSinceStartup) % station.length;
                     foreach(var track in station.tracks)
                     {
-                        if(offset < track.length)
+                        if(offset <= track.length)
                         {
-
+                            if(track.length - offset < 0.1f)
+                            {
+                                offset = 0;
+                                continue;
+                            }
                             source.clip = track;
                             source.time = offset;
                             source.Play();
-                            //Dbgl($"Starting radio {station.name} - {track.name} {(int)offset} {station.randomStart + Time.realtimeSinceStartup} % {station.length}");
+                            Dbgl($"Starting radio {station.name} - {track.name} {offset} {station.randomStart + Time.realtimeSinceStartup} % {station.length}");
 
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), station.name + " - " + track.name, string.Empty, null, null, true);
+                            if(config.announceTrack)
+                                GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), station.name + " - " + track.name, string.Empty, null, null, true);
                             break;
                         }
                         offset -= track.length;
                     }
                 }
-                else if(source.isPlaying && (!rs.on || (rs.autoToggle && __instance.AttachedMainEntity == null)))
+                else if(source.isPlaying && !rs.on)
                 {
                     source.Stop();
                 }
@@ -205,7 +203,7 @@ namespace VehicleRadio
                 source.spatialBlend = 1.0f;
                 var radioSwitch = go.AddComponent<RadioSwitch>();
                 radioSwitch.on = config.defaultOn;
-                radioSwitch.autoToggle = config.defaultAutoToggle;
+                radioSwitch.station = Mathf.Clamp(config.defaultStation, 0, stations.Count);
             }
             else
             {

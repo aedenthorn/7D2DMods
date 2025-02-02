@@ -65,11 +65,11 @@ namespace KillNotification
                         if (uilabel != null && uilabel.text.Contains(killed))
                         {
                             collectedItemList.items[i].count++;
-                            uilabel.text = string.Format(config.notificationText, collectedItemList.items[i].count, killed);
+                            uilabel.text = config.notificationTextPlural.Replace("{name}", killed).Replace("{number}", collectedItemList.items[i].count.ToString());
                             collectedItemList.items[i].TimeAdded = Time.time;
+                            return;
                         }
                     }
-                    return;
                 }
             }
             GameObject gameObject = collectedItemList.ViewComponent.UiTransform.gameObject.AddChild(collectedItemList.PrefabItems.gameObject);
@@ -81,7 +81,7 @@ namespace KillNotification
             transform = gameObject.transform.Find("Negative");
             if (transform != null)
             {
-                transform.gameObject.SetActive(false);
+                transform.gameObject.SetActive(false); 
             }
             uilabel = gameObject.transform.GetComponentInChildren<UILabel>();
             if (uilabel == null)
@@ -90,7 +90,7 @@ namespace KillNotification
             }
             if (uilabel != null)
             {
-                uilabel.text = string.Format(config.notificationText, 1, killed);
+                uilabel.text = config.notificationTextSingle.Replace("{name}", killed).Replace("{number}", "1");
             }
             UISprite component = gameObject.transform.Find("Icon").GetComponent<UISprite>();
             if (component != null)

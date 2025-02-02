@@ -40,6 +40,8 @@ namespace AdvancedCruiseControl
             typeof(EntityBicycle),
             typeof(EntityMinibike),
             typeof(EntityMotorcycle),
+            typeof(EntityVGyroCopter),
+            typeof(EntityVBlimp),
             typeof(EntityVJeep)
         };
 

@@ -7,6 +7,7 @@ namespace KillNotification
         public bool isDebug = true;
         public string notificationSound = "coins_grab";
         public string notificationIcon = "ui_game_symbol_death";
-        public string notificationText = "{0} {1}";
+        public string notificationTextSingle = "{name}";
+        public string notificationTextPlural = "{name} ({number})";
     }
 }
