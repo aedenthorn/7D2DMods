@@ -67,6 +67,11 @@
       <HintPath>$(ManagedDataPath)\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="NGUI">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ManagedDataPath)\NGUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="InControl">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(ManagedDataPath)\InControl.dll</HintPath>

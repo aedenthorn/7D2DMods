@@ -38,6 +38,19 @@ namespace MapTeleport
                 GameStats.SetObject(EnumGameStats.IsTeleportEnabled, true);
             }
         }
+        
+        [HarmonyPatch(typeof(XUiC_MapArea), nameof(XUiC_MapArea.teleportPlayerOnMap))]
+        static class XUiC_MapArea_teleportPlayerOnMap_Patch
+        {
+
+            static void Postfix()
+            {
+                if (!config.modEnabled)
+                    return;
+                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
+
+            }
+        }
 
         public void LoadConfig()
         {

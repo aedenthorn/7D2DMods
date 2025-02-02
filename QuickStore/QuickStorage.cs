@@ -151,13 +151,13 @@ namespace QuickStorage
             Dbgl($"Got {storageList.Count} storages"); 
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
-            var bag = world.GetPrimaryPlayer().bag;
-            var ctrl = ((XUiWindowGroup)world.GetPrimaryPlayer().PlayerUI.windowManager.GetWindow("backpack")).Controller.GetChildByType<XUiC_Backpack>();
+            var player = world.GetPrimaryPlayer();
+            var bag = player.bag;
+            var ctrl = ((XUiWindowGroup)player.PlayerUI.windowManager.GetWindow("backpack")).Controller.GetChildByType<XUiC_Backpack>();
             ItemStack[] slots = bag.GetSlots();
-
             for (int i = config.skipSlots; i < slots.Length; i++)
             {
-                if (slots[i].IsEmpty() || ctrl.itemControllers[i].userLockedSlot)
+                if (slots[i].IsEmpty() || (bag.LockedSlots.Length > i && bag.LockedSlots[i]))
                     continue;
                 var initItem = slots[i].Clone();
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;

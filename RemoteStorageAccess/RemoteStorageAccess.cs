@@ -149,6 +149,11 @@ namespace RemoteStorageAccess
                                 currentStorage = sortedStorageList[0];
                             OpenStorage();
                         }
+                        else if(vehicleList.Count > 0)
+                        {
+                            currentVehicleStorage = 0;
+                            OpenVehicleStorage();
+                        }
                     }
 
                 }

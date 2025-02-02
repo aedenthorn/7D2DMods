@@ -87,7 +87,7 @@ namespace QuickHarvest
                         BlockValue bv = player.world.GetBlock(newPos);
                         if (bv.isair || bv.ischild)
                             continue;
-                        if (bv.Block.blockName.StartsWith("planted") && bv.Block.blockName.EndsWith("HarvestPlayer"))
+                        if (bv.Block.blockName.ToLower().StartsWith("planted") && bv.Block.blockName.ToLower().EndsWith("harvestplayer"))
                         {
                             try
                             {
