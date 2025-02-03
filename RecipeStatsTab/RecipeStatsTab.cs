@@ -100,6 +100,22 @@ namespace RecipeStatsTab
                 ((XUiV_Button)__instance.GetChildById("recipeStatsButton").ViewComponent).Selected = showStats;
             }
         }
+        [HarmonyPatch(typeof(XUiC_CraftingInfoWindow), nameof(XUiC_CraftingInfoWindow.SetRecipe))]
+        public static class XUiC_CraftingInfoWindow_SetRecipe_Patch
+        {
+            public static void Prefix(XUiC_CraftingInfoWindow __instance, ref bool __state)
+            {
+                if (!config.modEnabled || !showStats || __instance.recipe != null || !XUiM_Recipes.GetRecipeIsUnlocked(__instance.xui, __instance.recipe))
+                    return;
+                __state = true;
+            }
+            public static void Postfix(XUiC_CraftingInfoWindow __instance, ref bool __state)
+            {
+                if (!__state)
+                    return;
+                StatsButton_OnPress(__instance, 0);
+            }
+        }
         [HarmonyPatch(typeof(XUiC_CraftingInfoWindow), nameof(XUiC_CraftingInfoWindow.GetBindingValue))]
         public static class XUiC_CraftingInfoWindow_GetBindingValue_Patch
         {

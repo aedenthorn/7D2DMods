@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="ShowRepairRequirements" />
+  <DisplayName value="Show Repair Requirements" />
+  <Description value="Adds tooltip to show item repair requirements." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>

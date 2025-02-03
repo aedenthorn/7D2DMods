@@ -200,6 +200,7 @@ namespace VehicleRadio
                 sourceTransform.localPosition = Vector3.zero;
                 source = go.AddComponent<AudioSource>();
                 source.spatialize = true;
+                source.dopplerLevel = 0;
                 source.spatialBlend = 1.0f;
                 var radioSwitch = go.AddComponent<RadioSwitch>();
                 radioSwitch.on = config.defaultOn;
