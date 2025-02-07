@@ -49,6 +49,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KillNotification", "KillNot
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowRepairRequirements", "ShowRepairRequirements\ShowRepairRequirements.csproj", "{DB9B79AB-FB41-45FC-B23A-D80F8C1AD199}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClearQuestDebug", "ClearQuestDebug\ClearQuestDebug.csproj", "{49F0BA37-64A3-402C-8521-57E067FDFFD7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PreserveFallenBlocks", "PreserveFallenBlocks\PreserveFallenBlocks.csproj", "{D46863A0-845F-465E-A1A7-63F02466B13D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -147,6 +151,14 @@ Global
 		{DB9B79AB-FB41-45FC-B23A-D80F8C1AD199}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB9B79AB-FB41-45FC-B23A-D80F8C1AD199}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB9B79AB-FB41-45FC-B23A-D80F8C1AD199}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49F0BA37-64A3-402C-8521-57E067FDFFD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49F0BA37-64A3-402C-8521-57E067FDFFD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49F0BA37-64A3-402C-8521-57E067FDFFD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49F0BA37-64A3-402C-8521-57E067FDFFD7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D46863A0-845F-465E-A1A7-63F02466B13D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D46863A0-845F-465E-A1A7-63F02466B13D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D46863A0-845F-465E-A1A7-63F02466B13D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D46863A0-845F-465E-A1A7-63F02466B13D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

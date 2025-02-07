@@ -58,19 +58,8 @@ namespace ShowRemainingToClear
                 int left = 0;
                 foreach (var sed in QuestEventManager.Current.SleeperVolumeUpdateDictionary.Values)
                 {
-                    if (sed.EntityList.Exists(e => (GameManager.Instance.World.GetEntity(e) as EntityPlayer) is EntityPlayerLocal))
+                    if (sed.EntityList.Exists(e => GameManager.Instance.World.GetEntity(e) is EntityPlayerLocal))
                     {
-                        for(int i = sed.SleeperVolumes.Count - 1; i >= 0 ; i--)
-                        {
-                            if (sed.SleeperVolumes[i].respawnMap.Count == 0)
-                            {
-                                //Dbgl($"Empty respawnMap, removing sleeper volume; cleared {sed.SleeperVolumes[i].wasCleared}");
-
-                                //QuestEventManager.Current.SleeperVolumePositionRemoved(sed.SleeperVolumes[i].Center);
-
-                                //sed.SleeperVolumes.RemoveAt(i);
-                            }
-                        }
                         left = sed.SleeperVolumes.Count();
                         break;
                     }
@@ -82,38 +71,30 @@ namespace ShowRemainingToClear
                 return false;
             }
         }
-        [HarmonyPatch(typeof(NavObject), nameof(NavObject.IsValidEntity))]
-        public static class NavObject_IsValidEntity_Patch
+        //[HarmonyPatch(typeof(SleeperEventData), nameof(SleeperEventData.Update))]
+        public static class SleeperEventData_Update_Patch
         {
-            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            public static void Postfix(SleeperEventData __instance)
             {
-                Dbgl("Transpiling NavObject.IsValidEntity");
-                var codes = new List<CodeInstruction>(instructions);
-                for (int i = 0; i < codes.Count; i++)
+                if (!config.modEnabled || !AedenthornUtils.CheckKeyDown(config.showAllPointsKey))
+                    return;
+                for (int l = 0; l < __instance.EntityList.Count; l++)
                 {
-                    if (codes[i].opcode == OpCodes.Ldfld && (FieldInfo)codes[i].operand == AccessTools.Field(typeof(EntityAlive), nameof(EntityAlive.IsSleeperPassive)))
+                    EntityPlayer entityPlayer = GameManager.Instance.World.GetEntity(__instance.EntityList[l]) as EntityPlayer;
+                    for (int m = 0; m < __instance.SleeperVolumes.Count; m++)
                     {
-                        Dbgl($"Overriding check for passive sleeping");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ShowRemainingToClear), nameof(ShowRemainingToClear.OverrideIsSleeperPassive))));
-                        i++;
+                        if (entityPlayer is EntityPlayerLocal)
+                        {
+                            QuestEventManager.Current.SleeperVolumePositionAdded(__instance.SleeperVolumes[m].Center);
+                        }
+                        else
+                        {
+                            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuestEvent>().Setup(NetPackageQuestEvent.QuestEventTypes.ShowSleeperVolume, __instance.EntityList[l], __instance.SleeperVolumes[m].Center), false, __instance.EntityList[l], -1, -1, null, 192);
+                        }
                     }
                 }
-
-                return codes.AsEnumerable();
-            }
-            public static void Postfix(NavObject __instance, EntityPlayerLocal player, Entity entity, NavObjectClass navObjectClass)
-            {
-
             }
         }
 
-        private static bool OverrideIsSleeperPassive(bool result)
-        {
-            if(!config.modEnabled || !config.showAllSleepers)
-            {
-                return result;
-            }
-            return false;
-        }
     }
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="PreserveFallenBlocks" />
+  <DisplayName value="Preserve Fallen Blocks" />
+  <Description value="Preserve fallen blocks at their location of impact." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>
