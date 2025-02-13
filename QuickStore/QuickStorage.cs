@@ -122,6 +122,8 @@ namespace QuickStorage
                     foreach (var kvp in c.tileEntities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
+                        if (config.range < 0 || Vector3.Distance(world.GetPrimaryPlayer().position, loc) > config.range)
+                            continue;
                         var entity = (kvp.Value as TileEntityComposite);
                         if (entity != null)
                         {
