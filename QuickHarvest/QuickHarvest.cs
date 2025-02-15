@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using SteelSeries.GameSense;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -52,10 +53,10 @@ namespace QuickHarvest
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
                 if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || LocalPlayerUI.AnyModalWindowOpen())
                     return;
@@ -85,7 +86,13 @@ namespace QuickHarvest
                     {
                         var newPos = blockPosition + new Vector3i(i, j, k);
                         BlockValue bv = player.world.GetBlock(newPos);
+
                         if (bv.isair || bv.ischild)
+                            continue;
+                        Chunk chunk = (Chunk)player.world.GetChunkFromWorldPos(newPos);
+                        int lcs = GameStats.GetInt(EnumGameStats.LandClaimSize);
+                        int num = (lcs - 1) / 2;
+                        if (player.world.IsLandProtectedBlock(chunk, newPos, player.persistentPlayerData, num, num, false))
                             continue;
                         if (bv.Block.blockName.ToLower().StartsWith("planted") && bv.Block.blockName.ToLower().EndsWith("harvestplayer"))
                         {
@@ -93,22 +100,21 @@ namespace QuickHarvest
                             {
                                 BlockValue newBlock = BlockValue.Air;
                                 ItemValue seedValue = null;
-                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Destroy, out var list))
+                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Destroy, out var destroyList))
                                 {
-                                    for (int x = 0; x < list.Count; x++)
+                                    for (int x = 0; x < destroyList.Count; x++)
                                     {
-                                        var item = list[x];
-                                        if (!item.name.StartsWith("planted"))
-                                            continue;
+                                        var item = destroyList[x];
                                         float num2 = EffectManager.GetValue(PassiveEffects.HarvestCount, player.inventory.holdingItemItemValue, 1, player, null, FastTags<TagGroup.Global>.Parse(item.tag), true, true, true, true, true, 1, true, false);
-
-                                        seedValue = item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false);
-                                        if (seedValue.type != 0 && ItemClass.list[seedValue.type] != null && (item.prob > 0.999f || GameUtils.random.RandomFloat <= item.prob))
+                                        int num3 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num2);
+                                        if (num3 <= 0)
+                                            continue;
+                                        if (item.name.ToLower().StartsWith("planted"))
                                         {
-                                            int num3 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num2);
-                                            if (num3 > 0)
+                                            seedValue = item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false);
+                                            if (seedValue.type != 0 && ItemClass.list[seedValue.type] != null && (item.prob > 0.999f || GameUtils.random.RandomFloat <= item.prob))
                                             {
-                                                if(newBlock.Equals(BlockValue.Air))
+                                                if (newBlock.Equals(BlockValue.Air))
                                                 {
                                                     newBlock = seedValue.ToBlockValue();
                                                     if (!newBlock.Equals(BlockValue.Air))
@@ -121,17 +127,20 @@ namespace QuickHarvest
                                                 {
                                                     collectHarvestedItem(player, bv, seedValue, num3);
                                                 }
-
                                             }
+                                        }
+                                        else
+                                        {
+                                            collectHarvestedItem(player, bv, seedValue, num3);
                                         }
                                     }
                                 }
-                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Harvest, out var list2))
+                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Harvest, out var harvestList))
                                 {
-                                    for (int x = 0; x < list2.Count; x++)
+                                    for (int x = 0; x < harvestList.Count; x++)
                                     {
                                         int itemsToCollect = 0;
-                                        var item = list2[x];
+                                        var item = harvestList[x];
                                         float num4 = 0f;
                                         ItemValue itemValue = (item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false));
                                         if (itemValue.type != 0 && ItemClass.list[itemValue.type] != null)
@@ -141,7 +150,7 @@ namespace QuickHarvest
                                             int num6 = num5 - num5 / 3;
                                             if (num6 > 0)
                                             {
-                                                if(GameUtils.random.RandomFloat <= item.prob)
+                                                if (GameUtils.random.RandomFloat <= item.prob)
                                                 {
                                                     itemsToCollect += num6;
                                                 }
@@ -167,7 +176,7 @@ namespace QuickHarvest
                                             }
                                             if (newBlock.Equals(BlockValue.Air) && seedValue != null)
                                             {
-                                                if(itemValue.type == seedValue.type)
+                                                if (itemValue.type == seedValue.type)
                                                 {
                                                     newBlock = itemValue.ToBlockValue();
                                                     Dbgl($"got replacement seed {newBlock.Block.blockName}");
@@ -195,7 +204,7 @@ namespace QuickHarvest
                                                     }
                                                 }
                                             }
-                                            if(itemsToCollect > 0)
+                                            if (itemsToCollect > 0)
                                             {
                                                 collectHarvestedItem(player, bv, itemValue, itemsToCollect);
                                             }
@@ -243,9 +252,7 @@ namespace QuickHarvest
                 {
                     GameManager.Instance.ItemDropServer(new ItemStack(_iv, itemStack.count), GameManager.Instance.World.GetPrimaryPlayer().GetDropPosition(), new Vector3(0.5f, 0.5f, 0.5f), GameManager.Instance.World.GetPrimaryPlayerId(), 60f, false);
                 }
-                uiforPlayer.entityPlayer.Progression.AddLevelExp((int)(itemStack.itemValue.ItemClass.MadeOfMaterial.Experience * (float)_count), "_xpFromHarvesting", Progression.XPTypes.Harvesting, true, true);
             }
-
         }
     }
 }

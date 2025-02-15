@@ -41,9 +41,9 @@ namespace PickLockedDoors
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
         [HarmonyPatch(typeof(GameManager), "StartGame")]
-        static class GameManager_StartGame_Patch
+        public static class GameManager_StartGame_Patch
         {
-            static void Prefix()
+            public static void Prefix()
             {
                 pickTimeDict.Clear();
             }
@@ -145,6 +145,7 @@ namespace PickLockedDoors
                 BlockValue blockValue = (BlockValue)array[1];
                 Vector3i blockPos = (Vector3i)array[2];
                 BlockValue block = world.GetBlock(blockPos);
+                pickTimeDict.Remove(blockPos);
                 EntityPlayerLocal entityPlayerLocal = array[3] as EntityPlayerLocal;
                 TileEntitySecureDoor tileEntitySecureDoor = (TileEntitySecureDoor)world.GetTileEntity(clrIdx, blockPos);
                 if (tileEntitySecureDoor == null)

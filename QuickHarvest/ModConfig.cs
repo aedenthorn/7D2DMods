@@ -1,4 +1,6 @@
 ﻿
+using System.Collections.Generic;
+
 namespace QuickHarvest
 {
     public class ModConfig

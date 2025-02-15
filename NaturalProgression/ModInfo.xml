@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="NaturalProgression" />
+  <DisplayName value="Natural Progression" />
+  <Description value="Lets you upgrade skills by playing the game." />
+	<Author value="aedenthorn" />
+	<Version value="0.2.0" />
+</xml>
