@@ -241,7 +241,7 @@ namespace NaturalProgression
                     case Progression.XPTypes.Harvesting:
                     case Progression.XPTypes.Repairing:
                     case Progression.XPTypes.Upgrading:
-                        AddSkillXP((__instance.parent as EntityPlayerLocal), currentSkillType, __result);
+                        AddSkillXP(__instance.parent as EntityPlayerLocal, currentSkillType, __result);
                         break;
                 }
             }
@@ -257,8 +257,8 @@ namespace NaturalProgression
                 LoadExpFile();
             }
         }
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.SaveLocalPlayerData))]
-        static class GameManager_SaveLocalPlayerData_Patch
+        [HarmonyPatch(typeof(PlayerDataFile), nameof(PlayerDataFile.Save))]
+        static class PlayerDataFile_Save_Patch
         {
             static void Prefix()
             {
@@ -396,6 +396,9 @@ namespace NaturalProgression
                
                 }
             }
+
+
+
             var progressionValue = player.Progression.GetProgressionValue(sType.ToString());
             if (progressionValue == null)
             {
@@ -408,22 +411,19 @@ namespace NaturalProgression
             Dbgl($"Added xp {num} to {sType}, total {dict[sType]}, next level {levelXP}");
             if (remain < 0)
                 return;
-            if(!string.IsNullOrEmpty(config.levelUpSound))
-                Audio.Manager.PlayInsidePlayerHead(config.levelUpSound, -1, 0f, false, false);
-
             while (remain >= 0)
             {
                 if (progressionValue.Level + 1 <= progressionValue.ProgressionClass.MaxLevel)
                 {
-                    ProgressionValue progressionValue2 = progressionValue;
-                    int level = progressionValue2.Level;
-                    progressionValue2.Level = level + 1;
                     player.MinEventContext.ProgressionValue = progressionValue;
-                    progressionValue.ProgressionClass.FireEvent(MinEventTypes.onPerkLevelChanged, player.MinEventContext);
-                    string text = Localization.Get(progressionValue.ProgressionClass.NameKey, false);
-                    if(player is EntityPlayerLocal)
-                        GameManager.ShowTooltip(player as EntityPlayerLocal, string.Format(Localization.Get("ttSkillLevelUp", false), text, progressionValue.Level), false);
-                    player.bPlayerStatsChanged = true;
+                    MinEventActionAddProgressionLevel minEvent = new MinEventActionAddProgressionLevel()
+                    {
+                        progressionName = sType.ToString(),
+                        level = 1
+                    };
+                    minEvent.targets.Clear();
+                    minEvent.targets.Add(player);
+                    minEvent.Execute(player.MinEventContext);
                     Dbgl($"level up {sType}");
                 }
                 else
@@ -440,7 +440,8 @@ namespace NaturalProgression
         public static void SaveExpFile()
         {
             var json = JsonConvert.SerializeObject(skillDict, Formatting.Indented);
-            Dbgl($"Saving exp file \n\n{json}");
+            Dbgl("Saving exp file");
+            //Dbgl($"{json}");
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), GameManager.Instance.World.Guid + ".json");
 
             File.WriteAllText(path, json);

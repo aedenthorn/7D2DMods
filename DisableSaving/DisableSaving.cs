@@ -2,6 +2,7 @@
 using HarmonyLib;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace DisableSaving
         public static DisableSaving context;
         public static Mod mod;
         public static AudioClip spawnSound;
+        public static bool savingEnabled = true;
 
         public void InitMod(Mod modInstance)
         {
@@ -28,75 +30,141 @@ namespace DisableSaving
 
 
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.SaveLocalPlayerData))]
-        static class GameManager_SaveLocalPlayerData_Patch
+        public static class GameManager_SaveLocalPlayerData_Patch
         {
-            static bool Prefix()
+            public static bool Prefix()
             {
-                if (!config.modEnabled || config.savingEnabled)
+                if (!config.modEnabled || savingEnabled)
                     return true;
                 Dbgl("Prevented saving player data");
                 return false;
             }
         }
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.SaveWorld))]
-        static class GameManager_SaveWorld_Patch
+        public static class GameManager_SaveWorld_Patch
         {
-            static bool Prefix()
+            public static bool Prefix()
             {
-                if (!config.modEnabled || config.savingEnabled)
+                if (!config.modEnabled || savingEnabled)
                     return true;
                 Dbgl("Prevented saving world");
                 return false;
             }
         }
         [HarmonyPatch(typeof(World), nameof(World.Save))]
-        static class World_Save_Patch
+        public static class World_Save_Patch
         {
-            static bool Prefix()
+            public static bool Prefix()
             {
-                if (!config.modEnabled || config.savingEnabled)
+                if (!config.modEnabled || savingEnabled)
                     return true;
                 Dbgl("Prevented saving world - this shouldn't be necessary");
                 return false;
             }
         }
-        [HarmonyPatch(typeof(WorldState), nameof(WorldState.Save), new Type[] { typeof(string) } )]
-        static class WorldState_Save_Patch1
+        [HarmonyPatch(typeof(World), nameof(World.SaveWorldState))]
+        public static class World_SaveWorldState_Patch
         {
-            static bool Prefix()
+            public static bool Prefix()
             {
-                if (!config.modEnabled || config.savingEnabled)
+                if (!config.modEnabled || savingEnabled)
                     return true;
                 Dbgl("Prevented saving world state");
                 return false;
             }
         }
-        [HarmonyPatch(typeof(WorldState), nameof(WorldState.Save), new Type[] { typeof(Stream) } )]
-        static class WorldState_Save_Patch2
+        [HarmonyPatch(typeof(Chunk), nameof(Chunk.NeedsSaving))]
+        [HarmonyPatch(MethodType.Getter)]
+        public static class Chunk_NeedsSaving_Patch
         {
-            static bool Prefix()
+            public static bool Prefix(ref bool __result)
             {
-                if (!config.modEnabled || config.savingEnabled)
+                if (!config.modEnabled || savingEnabled)
                     return true;
-                Dbgl("Prevented saving world state");
+                __result = false;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(MultiBlockManager), nameof(MultiBlockManager.SaveIfDirty))]
+        public static class MultiBlockManager_SaveIfDirty_Patch
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled)
+                    return true;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(StreamUtils), nameof(StreamUtils.WriteStreamToFile), new Type[] { typeof(Stream), typeof(string) })]
+        public static class StreamUtils_WriteStreamToFile_Patch1
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled)
+                    return true;
+                Dbgl("Prevented saving stream");
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(StreamUtils), nameof(StreamUtils.WriteStreamToFile), new Type[] { typeof(Stream), typeof(string), typeof(int) })]
+        public static class StreamUtils_WriteStreamToFile_Patch2
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled)
+                    return true;
+                Dbgl("Prevented saving stream");
+                return false;
+            }
+        }
+        
+        [HarmonyPatch(typeof(GamePrefs), nameof(GamePrefs.Save), new Type[] { })]
+        public static class GamePrefs_Save_Patch1
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled || !config.includeGamePrefs)
+                    return true;
+                Dbgl("Prevented saving prefs");
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(GamePrefs), nameof(GamePrefs.Save), new Type[] { typeof(string) })]
+        public static class GamePrefs_Save_Patch2
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled || !config.includeGamePrefs)
+                    return true;
+                Dbgl("Prevented saving prefs");
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(GamePrefs), nameof(GamePrefs.Save), new Type[] { typeof(string), typeof(List<EnumGamePrefs>) })]
+        public static class GamePrefs_Save_Patch3
+        {
+            public static bool Prefix()
+            {
+                if (!config.modEnabled || savingEnabled || !config.includeGamePrefs)
+                    return true;
+                Dbgl("Prevented saving prefs");
                 return false;
             }
         }
 
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.Update))]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
-            static void Postfix()
+            public static void Postfix(World ___m_World)
             {
-                if (!config.modEnabled)
+                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null)
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.toggleKey))
                 {
-                    config.savingEnabled = !config.savingEnabled;
-                    Dbgl($"Pressed toggle key; enabled: {config.savingEnabled}");
-                    SaveConfig();
+                    savingEnabled = !savingEnabled;
+                    Dbgl($"Pressed toggle key; enabled: {savingEnabled}");
                     if(GameManager.Instance.World?.GetPrimaryPlayer() != null)
-                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), string.Format(config.toggleText, config.savingEnabled), string.Empty, null, null, true);
+                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), string.Format(config.toggleText, savingEnabled), string.Empty, null, null, true);
                 }
             }
         }

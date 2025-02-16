@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using InControl;
 using Newtonsoft.Json;
 using Platform;
 using System;
@@ -17,7 +18,9 @@ namespace ToggleHoldingItem
         public static ToggleHoldingItem context;
         public static Mod mod;
         public static bool hidingItem;
+        //public static bool startedHidingItem;
         private static Transform holdingModel;
+        private static int holdingModelIndex;
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -29,37 +32,61 @@ namespace ToggleHoldingItem
 
         }
 
-        [HarmonyPatch(typeof(GameManager), "Update")]
+        [HarmonyPatch(typeof(PlayerMoveController), nameof(PlayerMoveController.Update))]
         static class GameManager_Update_Patch
         {
 
-            static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            static void Prefix(PlayerMoveController __instance)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
+                if (!config.modEnabled || __instance.entityPlayerLocal.AttachedToEntity != null)
                     return;
-                if (AedenthornUtils.CheckKeyDown(config.toggleKey) && AedenthornUtils.CheckKeyHeld(config.toggleModKey, false))
+                int newSlot = __instance.playerInput.InventorySlotWasPressed;
+                if (newSlot >= 0)
+                {
+                    if (__instance.playerInput.LastInputType == BindingSourceType.DeviceBindingSource)
+                    {
+                        if (__instance.entityPlayerLocal.AimingGun)
+                        {
+                            newSlot = -1;
+                        }
+                    }
+                    else if (InputUtils.ShiftKeyPressed && __instance.entityPlayerLocal.inventory.PUBLIC_SLOTS > __instance.entityPlayerLocal.inventory.SHIFT_KEY_SLOT_OFFSET)
+                    {
+                        newSlot += __instance.entityPlayerLocal.inventory.SHIFT_KEY_SLOT_OFFSET;
+                    }
+                }
+                if (__instance.inventoryScrollPressed && __instance.inventoryScrollIdxToSelect != -1)
+                {
+                    newSlot = __instance.inventoryScrollIdxToSelect;
+                }
+                if(newSlot > -1 && newSlot == __instance.entityPlayerLocal.inventory.GetFocusedItemIdx())
                 {
                     hidingItem = !hidingItem;
-                    Dbgl($"Pressed toggle key; hiding item {hidingItem}");
+                    int idx = GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx;
                     if (hidingItem)
                     {
-                        holdingModel = GameManager.Instance.World.GetPrimaryPlayer().inventory.models[GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx];
-                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx] = null;
+                        holdingModelIndex = idx;
+                        holdingModel = GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx];
+                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = null;
                     }
                     else
                     {
-                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx] = holdingModel;
+                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = holdingModel;
                     }
-                    GameManager.Instance.World.GetPrimaryPlayer().inventory.ForceHoldingItemUpdate();
+                    GameManager.Instance.World.GetPrimaryPlayer().inventory.updateHoldingItem();
+                    //GameManager.Instance.World.GetPrimaryPlayer().inventory.setHeldItemByIndex(idx, false);
+                    //startedHidingItem = false;
+
                 }
+
             }
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemItemValue))]
         [HarmonyPatch(MethodType.Getter)]
-        static class Inventory_holdingItemItemValue_Patch
+        public static class Inventory_holdingItemItemValue_Patch
         {
 
-            static bool Prefix(Inventory __instance, ref ItemValue __result)
+            public static bool Prefix(Inventory __instance, ref ItemValue __result)
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
@@ -69,10 +96,10 @@ namespace ToggleHoldingItem
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItem))]
         [HarmonyPatch(MethodType.Getter)]
-        static class Inventory_holdingItem_Patch
+        public static class Inventory_holdingItem_Patch
         {
 
-            static bool Prefix(Inventory __instance, ref ItemClass __result)
+            public static bool Prefix(Inventory __instance, ref ItemClass __result)
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
@@ -82,10 +109,10 @@ namespace ToggleHoldingItem
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemData))]
         [HarmonyPatch(MethodType.Getter)]
-        static class Inventory_holdingItemData_Patch
+        public static class Inventory_holdingItemData_Patch
         {
 
-            static bool Prefix(Inventory __instance, ref ItemInventoryData __result)
+            public static bool Prefix(Inventory __instance, ref ItemInventoryData __result)
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
@@ -94,10 +121,10 @@ namespace ToggleHoldingItem
             }
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.setHoldingItemTransform))]
-        static class Inventory_setHoldingItemTransform_Patch
+        public static class Inventory_setHoldingItemTransform_Patch
         {
 
-            static void Prefix(Inventory __instance, ref Transform _t)
+            public static void Prefix(Inventory __instance, ref Transform _t)
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return;
@@ -105,17 +132,15 @@ namespace ToggleHoldingItem
             }
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.HoldingItemHasChanged))]
-        static class Inventory_HoldingItemHasChanged_Patch
+        public static class Inventory_HoldingItemHasChanged_Patch
         {
 
-            static void Prefix(Inventory __instance)
+            public static void Prefix(Inventory __instance)
             {
-                if(__instance.entity is EntityPlayerLocal)
+                if(__instance.entity is EntityPlayerLocal && hidingItem)
                 {
-                    if(holdingModel != null)
-                    {
-                        GameObject.Destroy(holdingModel.gameObject);
-                    }
+                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[holdingModelIndex] = holdingModel;
+                    holdingModel = null;
                     hidingItem = false;
                 }
             }
