@@ -1,6 +1,7 @@
 ﻿using Audio;
 using HarmonyLib;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -13,7 +14,9 @@ namespace WorldReadyChime
         public static ModConfig config;
         public static WorldReadyChime context;
         public static Mod mod;
-        public static AudioClip spawnSound;
+        public static AudioClip spawnChime;
+        public static bool customChime;
+        internal static string customChimePath;
 
         public void InitMod(Mod modInstance)
         {
@@ -23,6 +26,17 @@ namespace WorldReadyChime
 
             Harmony harmony = new Harmony(GetType().ToString());
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+            foreach(var f in Directory.GetFiles(modInstance.Path))
+            {
+                if (Path.GetFileNameWithoutExtension(f).ToLower() == "chime" && new List<string>() { ".wav", ".mp3", ".m4a", ".ogg" }.Contains(Path.GetExtension(f)))
+                {
+                    Dbgl($"Found custom chime file at {f}");
+                    customChimePath = f;
+                    var chimeGo = new GameObject("WorldChimeLoader");
+                    var wcl = chimeGo.AddComponent<WorldChimeLoader>();
+                    break;
+                }
+            }
         }
 
 
@@ -32,11 +46,11 @@ namespace WorldReadyChime
         {
             static void Postfix(XUi __instance)
             {
-                if (!config.modEnabled)
+                if (!config.modEnabled || customChime ||  string.IsNullOrEmpty(config.chimeName))
                     return;
                 __instance.LoadData<AudioClip>(config.chimeName, delegate (AudioClip o)
                 {
-                    spawnSound = o;
+                    spawnChime = o;
                 });
             }
         }
@@ -45,10 +59,10 @@ namespace WorldReadyChime
         {
             static void Prefix(bool _enteringGame)
             {
-                if (!config.modEnabled || !_enteringGame)
+                if (!config.modEnabled || !_enteringGame || spawnChime == null)
                     return;
                 Dbgl($"playing {config.chimeName}");
-                Manager.PlayXUiSound(spawnSound, config.chimeVolume);
+                Manager.PlayXUiSound(spawnChime, config.chimeVolume);
             }
         }
         public static void LoadConfig()
