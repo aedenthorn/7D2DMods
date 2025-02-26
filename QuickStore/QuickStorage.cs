@@ -21,8 +21,8 @@ namespace QuickStorage
         public static ModConfig config;
         public static QuickStorage context;
         public static Mod mod;
-        private static List<Vector3i> storageList = new List<Vector3i>();
-        private static Dictionary<Vector3i, TEFeatureStorage> storageDict = new Dictionary<Vector3i, TEFeatureStorage>();
+        public static List<Vector3i> storageList = new List<Vector3i>();
+        public static Dictionary<Vector3i, TEFeatureStorage> storageDict = new Dictionary<Vector3i, TEFeatureStorage>();
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -55,10 +55,10 @@ namespace QuickStorage
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
                 if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
                     return;
@@ -104,7 +104,7 @@ namespace QuickStorage
                 }
             }
         }
-        private static void StoreItems(World world)
+        public static void StoreItems(World world)
         {
             Dbgl($"Storing items");
             LoadConfig();
@@ -219,7 +219,7 @@ namespace QuickStorage
 
             Dbgl($"Stored {dict.Count} items");
         }
-        private static void PullItems(World world)
+        public static void PullItems(World world)
         {
             Dbgl($"Pulling items");
             LoadConfig();

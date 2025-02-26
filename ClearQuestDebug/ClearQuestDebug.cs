@@ -47,7 +47,7 @@ namespace ClearQuestDebug
                         return false;
                     */
                     case "c":
-                        ClearSleeperVolumes();
+                        ClearSleeperVolumes(_params);
                         return false;
                 }
                 return true;
@@ -95,19 +95,25 @@ namespace ClearQuestDebug
                     return;
                 }
 
-
                 foreach (var value in QuestEventManager.instance.SleeperVolumeUpdateDictionary.Values.ToArray())
                 {
-                    Dbgl($"\t\tdespawning sleeper volumes: {value.SleeperVolumes.Count}");
-                    for (int j = 0; j < value.SleeperVolumes.Count; j++)
+                    for (int i = 0; i < value.EntityList.Count; i++)
                     {
-                        value.SleeperVolumes[j].respawnMap?.Clear();
-                        value.SleeperVolumes[j].respawnList?.Clear();
-                        value.SleeperVolumes[j].Despawn(world);
+                        if (GameManager.Instance.World.GetEntity(value.EntityList[i]) is EntityPlayerLocal)
+                        {
+                            Dbgl($"\t\tdespawning sleeper volumes: {value.SleeperVolumes.Count}");
+                            for (int j = 0; j < value.SleeperVolumes.Count; j++)
+                            {
+                                value.SleeperVolumes[j].respawnMap?.Clear();
+                                value.SleeperVolumes[j].respawnList?.Clear();
+                                value.SleeperVolumes[j].Despawn(world);
+                            }
+                            break;
+                        }
                     }
                 }
             }
-            private static void ClearSleeperVolumes()
+            private static void ClearSleeperVolumes(List<string> _params)
             {
 
                 var world = GameManager.Instance.World;
@@ -116,13 +122,21 @@ namespace ClearQuestDebug
                     return;
                 }
 
-
                 foreach (var value in QuestEventManager.instance.SleeperVolumeUpdateDictionary.Values.ToArray())
                 {
-                    Dbgl($"\tclearing sleeper volumes: {value.SleeperVolumes.Count}");
-                    for (int j = 0; j < value.SleeperVolumes.Count; j++)
+                    for (int i = 0; i < value.EntityList.Count; i++)
                     {
-                        value.SleeperVolumes[j].wasCleared = true;
+                        if(
+                            (_params.Count > 1 && GameManager.Instance.World.GetEntity(value.EntityList[i]) is EntityPlayer && (GameManager.Instance.World.GetEntity(value.EntityList[i]) as EntityPlayer).cachedPlayerName.AuthoredName.Text == _params[1]) || 
+                            (_params.Count == 1 && GameManager.Instance.World.GetEntity(value.EntityList[i]) is EntityPlayerLocal))
+                        {
+                            Dbgl($"\tclearing sleeper volumes: {value.SleeperVolumes.Count}");
+                            for (int j = 0; j < value.SleeperVolumes.Count; j++)
+                            {
+                                value.SleeperVolumes[j].wasCleared = true;
+                            }
+                            break;
+                        }
                     }
                 }
             }
