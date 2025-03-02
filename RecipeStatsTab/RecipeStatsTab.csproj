@@ -11,6 +11,9 @@
     <Content Include="bin\Debug\net480\Config\XUi\windows.xml" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Config\XUi\windows.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="ModInfo.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

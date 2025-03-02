@@ -10,6 +10,7 @@ namespace UnrestrictedTraderAccess
         public bool removePlaceProtection = true;
         public bool removeLandClaimProtection = true;
         public bool removeDamageProtection = false;
+        public bool playersOnlyDamage = false;
         public string damageProtectionDisabledText = "Trader damage protection disabled";
         public string damageProtectionEnabledText = "Trader damage protection enabled";
         public string[] alwaysAllowDamageTypes = { "blockNameHere", "blockPrefixHere*" };

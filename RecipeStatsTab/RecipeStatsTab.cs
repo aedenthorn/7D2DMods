@@ -1,14 +1,7 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
-using SteelSeries.GameSense;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Reflection.Emit;
-using UAI;
-using UnityEngine;
 using Path = System.IO.Path;
 
 namespace RecipeStatsTab
@@ -154,6 +147,8 @@ namespace RecipeStatsTab
         {
             if (craftingWindow?.recipe == null)
                 return "";
+            if (index > 0)
+                index--;
             var itemClass = ItemClass.GetItemClass(craftingWindow.recipe.GetName());
             var itemDisplayEntry = UIDisplayInfoManager.Current.GetDisplayStatsForTag(itemClass.IsBlock() ? Block.list[ItemClass.GetItem(craftingWindow.recipe.GetName(), false).type].DisplayType : itemClass.DisplayType);
 
@@ -172,6 +167,8 @@ namespace RecipeStatsTab
         {
             if (craftingWindow?.recipe == null)
                 return "";
+            if (index > 0)
+                index--;
             var itemClass = ItemClass.GetItemClass(craftingWindow.recipe.GetName());
             var itemValue = ItemClass.GetItem(craftingWindow.recipe.GetName(), false);
             var itemDisplayEntry = UIDisplayInfoManager.Current.GetDisplayStatsForTag(itemClass.IsBlock() ? Block.list[itemValue.type].DisplayType : itemClass.DisplayType);

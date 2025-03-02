@@ -1,0 +1,51 @@
+<configs>
+	<insertAfter xpath="/windows/window[@name='craftingInfoPanel']/rect[@name='contentCraftingInfo']/rect[@name='searchControls']/button[@name='showunlocksButton']">
+		<button depth="4" name="recipeStatsButton" visible="{# !showunlockedbytab}" style="icon30px, press" pos="108,-22" sprite="ui_game_symbol_ping" pivot="center" tooltip="Stats" tooltip_key="lblStats" sound="[paging_click]" selected="true" />
+	</insertAfter>
+	<insertAfter xpath="/windows/window[@name='craftingInfoPanel']/rect[@name='contentCraftingInfo']/rect[@name='unlockedBy']">
+		<rect depth="1" pos="153,-43" name="stats" width="447" height="228" visible="{showrecipestats}">
+			<rect pos="-3,0" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="35" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkestGrey]" pos="0,-1" height="34" type="sliced" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestattitle1}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestat1}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-33" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="34"  color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkGrey]" type="sliced" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestattitle2}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestat2}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-64" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="34" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkestGrey]" pos="0,-1" height="33" type="sliced" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestattitle3}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestat3}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-94" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="36"  color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkGrey]" type="sliced" />
+				<label depth="3" pos="10,-4" width="430" font_size="26" text="{recipestattitle4}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-4" width="430" font_size="26" text="{recipestat4}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-127" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="35" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkestGrey]" pos="0,-1" height="34" type="sliced" />
+				<label depth="3" pos="10,-4" width="430" font_size="26" text="{recipestattitle5}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-4" width="430" font_size="26" text="{recipestat5}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-159" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="36"  color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkGrey]" type="sliced" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestattitle6}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestat6}" justify="right" color="[selectedColor]" />
+			</rect>
+			<rect pos="-3,-192" height="35">
+				<sprite depth="8" sprite="menu_empty3px" height="36" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="1" color="[darkestGrey]" pos="0,-1" height="35" type="sliced" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestattitle7}" justify="left" color="[white]" />
+				<label depth="3" pos="10,-3" width="430" font_size="26" text="{recipestat7}" justify="right" color="[selectedColor]" />
+			</rect>
+		</rect>
+	</insertAfter>
+</configs>
