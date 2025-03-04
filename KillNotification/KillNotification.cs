@@ -1,15 +1,10 @@
 ﻿using Audio;
 using HarmonyLib;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using UniLinq;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Path = System.IO.Path;
 
 namespace KillNotification
@@ -20,6 +15,10 @@ namespace KillNotification
         public static ModConfig config;
         public static KillNotification context;
         public static Mod mod;
+
+        public static AudioClip killChime;
+        public static bool customChime;
+        public static string customChimePath;
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -28,6 +27,31 @@ namespace KillNotification
 
             Harmony harmony = new Harmony(GetType().ToString());
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+            foreach (var f in Directory.GetFiles(modInstance.Path))
+            {
+                if (Path.GetFileNameWithoutExtension(f).ToLower() == "chime" && new List<string>() { ".wav", ".mp3", ".m4a", ".ogg" }.Contains(Path.GetExtension(f)))
+                {
+                    Dbgl($"Found custom chime file at {f}");
+                    customChimePath = f;
+                    var chimeGo = new GameObject("KillChimeLoader");
+                    var wcl = chimeGo.AddComponent<KillChimeLoader>();
+                    break;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(XUi), nameof(XUi.Init))]
+        static class XUi_Init_Patch
+        {
+            static void Postfix(XUi __instance)
+            {
+                if (!config.modEnabled || customChime || string.IsNullOrEmpty(config.notificationSound))
+                    return;
+                __instance.LoadData<AudioClip>(config.notificationSound, delegate (AudioClip o)
+                {
+                    killChime = o;
+                });
+            }
         }
 
         [HarmonyPatch(typeof(EntityAlive), nameof(EntityAlive.AwardKill))]
@@ -37,9 +61,9 @@ namespace KillNotification
             {
                 if (!config.modEnabled || killer != GameManager.Instance.World.GetPrimaryPlayer())
                     return;
-                if (!string.IsNullOrEmpty(config.notificationSound))
+                if (killChime != null)
                 {
-                    Manager.PlayInsidePlayerHead(config.notificationSound, -1, 0f, false, false);
+                    Manager.PlayXUiSound(killChime, config.chimeVolume);
                 }
                 AddIconNotification(Localization.Get(__instance.EntityName, false));
 
