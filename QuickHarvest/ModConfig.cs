@@ -12,5 +12,10 @@ namespace QuickHarvest
 
         public string harvestKey = "h";
         public string harvestModKey = "";
+        public List<string> harvestTypes = new List<string>()
+        {
+            "plantedMyModTypeExample",
+            "plantedMyModTypePrefix*"
+        };
     }
 }

@@ -1,16 +1,11 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
-using SteelSeries.GameSense;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using UAI;
 using UnityEngine;
-using static ItemActionReplaceBlock;
-using static ReflectionManager;
 using Path = System.IO.Path;
 
 namespace QuickHarvest
@@ -94,7 +89,7 @@ namespace QuickHarvest
                         int num = (lcs - 1) / 2;
                         if (player.world.IsLandProtectedBlock(chunk, newPos, player.persistentPlayerData, num, num, false))
                             continue;
-                        if (bv.Block.blockName.ToLower().StartsWith("planted") && bv.Block.blockName.ToLower().EndsWith("harvestplayer"))
+                        if (IsHarvestableBlock(bv.Block.blockName.ToLower()))
                         {
                             try
                             {
@@ -238,6 +233,23 @@ namespace QuickHarvest
             }
 
             Dbgl($"Harvested {count} crops");
+        }
+
+        public static bool IsHarvestableBlock(string name)
+        {
+            if(name.StartsWith("planted") && name.EndsWith("harvestplayer"))
+            {
+                return true;
+            }
+            foreach(var t in config.harvestTypes)
+            {
+                var type = t.ToLower();
+                if (name.Equals(type) || (type.EndsWith("*") && name.StartsWith(type.Substring(0, type.Length - 1))))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static void collectHarvestedItem(EntityPlayerLocal player, BlockValue bv, ItemValue _iv, int _count)
