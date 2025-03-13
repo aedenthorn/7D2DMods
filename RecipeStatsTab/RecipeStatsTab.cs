@@ -98,7 +98,7 @@ namespace RecipeStatsTab
         {
             public static void Prefix(XUiC_CraftingInfoWindow __instance, ref bool __state)
             {
-                if (!config.modEnabled || !showStats || __instance.recipe != null || !XUiM_Recipes.GetRecipeIsUnlocked(__instance.xui, __instance.recipe))
+                if (!config.modEnabled || !showStats || __instance.recipe == null || !XUiM_Recipes.GetRecipeIsUnlocked(__instance.xui, __instance.recipe))
                     return;
                 __state = true;
             }

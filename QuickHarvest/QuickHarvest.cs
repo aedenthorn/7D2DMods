@@ -32,7 +32,14 @@ namespace QuickHarvest
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
             if (!File.Exists(path))
             {
-                config = new ModConfig();
+                config = new ModConfig()
+                {
+                    harvestTypes = new List<string>()
+                    {
+                        "plantedMyModTypeExample",
+                        "plantedMyModTypePrefix*"
+                    }
+                };
             }
             else
             {
@@ -89,144 +96,143 @@ namespace QuickHarvest
                         int num = (lcs - 1) / 2;
                         if (player.world.IsLandProtectedBlock(chunk, newPos, player.persistentPlayerData, num, num, false))
                             continue;
-                        if (IsHarvestableBlock(bv.Block.blockName.ToLower()))
+                        if (!IsHarvestableBlock(bv.Block.blockName.ToLower()))
+                            continue;
+                        try
                         {
-                            try
+                            BlockValue newBlock = BlockValue.Air;
+                            ItemValue seedValue = null;
+                            if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Destroy, out var destroyList))
                             {
-                                BlockValue newBlock = BlockValue.Air;
-                                ItemValue seedValue = null;
-                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Destroy, out var destroyList))
+                                for (int x = 0; x < destroyList.Count; x++)
                                 {
-                                    for (int x = 0; x < destroyList.Count; x++)
+                                    var item = destroyList[x];
+                                    float num2 = EffectManager.GetValue(PassiveEffects.HarvestCount, player.inventory.holdingItemItemValue, 1, player, null, FastTags<TagGroup.Global>.Parse(item.tag), true, true, true, true, true, 1, true, false);
+                                    int num3 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num2);
+                                    if (num3 <= 0)
+                                        continue;
+                                    if (item.name.ToLower().StartsWith("planted"))
                                     {
-                                        var item = destroyList[x];
-                                        float num2 = EffectManager.GetValue(PassiveEffects.HarvestCount, player.inventory.holdingItemItemValue, 1, player, null, FastTags<TagGroup.Global>.Parse(item.tag), true, true, true, true, true, 1, true, false);
-                                        int num3 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num2);
-                                        if (num3 <= 0)
-                                            continue;
-                                        if (item.name.ToLower().StartsWith("planted"))
+                                        seedValue = item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false);
+                                        if (seedValue.type != 0 && ItemClass.list[seedValue.type] != null && (item.prob > 0.999f || GameUtils.random.RandomFloat <= item.prob))
                                         {
-                                            seedValue = item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false);
-                                            if (seedValue.type != 0 && ItemClass.list[seedValue.type] != null && (item.prob > 0.999f || GameUtils.random.RandomFloat <= item.prob))
+                                            if (newBlock.Equals(BlockValue.Air))
                                             {
-                                                if (newBlock.Equals(BlockValue.Air))
+                                                newBlock = seedValue.ToBlockValue();
+                                                if (!newBlock.Equals(BlockValue.Air))
                                                 {
-                                                    newBlock = seedValue.ToBlockValue();
-                                                    if (!newBlock.Equals(BlockValue.Air))
-                                                    {
-                                                        Dbgl($"got replacement seed {newBlock.Block.blockName}");
-                                                        num3--;
-                                                    }
-                                                }
-                                                if (num3 > 0)
-                                                {
-                                                    collectHarvestedItem(player, bv, seedValue, num3);
+                                                    Dbgl($"got replacement seed {newBlock.Block.blockName}");
+                                                    num3--;
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            collectHarvestedItem(player, bv, seedValue, num3);
+                                            if (num3 > 0)
+                                            {
+                                                collectHarvestedItem(player, bv, seedValue, num3);
+                                            }
                                         }
                                     }
-                                }
-                                if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Harvest, out var harvestList))
-                                {
-                                    for (int x = 0; x < harvestList.Count; x++)
+                                    else
                                     {
-                                        int itemsToCollect = 0;
-                                        var item = harvestList[x];
-                                        float num4 = 0f;
-                                        ItemValue itemValue = (item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false));
-                                        if (itemValue.type != 0 && ItemClass.list[itemValue.type] != null)
+                                        collectHarvestedItem(player, bv, seedValue, num3);
+                                    }
+                                }
+                            }
+                            if (bv.Block.itemsToDrop.TryGetValue(EnumDropEvent.Harvest, out var harvestList))
+                            {
+                                for (int x = 0; x < harvestList.Count; x++)
+                                {
+                                    int itemsToCollect = 0;
+                                    var item = harvestList[x];
+                                    float num4 = 0f;
+                                    ItemValue itemValue = (item.name.Equals("*") ? bv.ToItemValue() : new ItemValue(ItemClass.GetItem(item.name, false).type, false));
+                                    if (itemValue.type != 0 && ItemClass.list[itemValue.type] != null)
+                                    {
+                                        num4 = EffectManager.GetValue(PassiveEffects.HarvestCount, player.inventory.holdingItemItemValue, num4, player, null, FastTags<TagGroup.Global>.Parse(item.tag), true, true, true, true, true, 1, true, false);
+                                        int num5 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num4);
+                                        int num6 = num5 - num5 / 3;
+                                        if (num6 > 0)
                                         {
-                                            num4 = EffectManager.GetValue(PassiveEffects.HarvestCount, player.inventory.holdingItemItemValue, num4, player, null, FastTags<TagGroup.Global>.Parse(item.tag), true, true, true, true, true, 1, true, false);
-                                            int num5 = (int)((float)GameUtils.random.RandomRange(item.minCount, item.maxCount + 1) * num4);
-                                            int num6 = num5 - num5 / 3;
-                                            if (num6 > 0)
+                                            if (GameUtils.random.RandomFloat <= item.prob)
                                             {
-                                                if (GameUtils.random.RandomFloat <= item.prob)
-                                                {
-                                                    itemsToCollect += num6;
-                                                }
+                                                itemsToCollect += num6;
                                             }
-                                            num6 = num5 / 3;
-                                            float num7 = item.prob;
-                                            float resourceScale = item.resourceScale;
-                                            if (resourceScale > 0f && resourceScale < 1f)
+                                        }
+                                        num6 = num5 / 3;
+                                        float num7 = item.prob;
+                                        float resourceScale = item.resourceScale;
+                                        if (resourceScale > 0f && resourceScale < 1f)
+                                        {
+                                            num7 /= resourceScale;
+                                            num6 = (int)((float)num6 * resourceScale);
+                                            if (num6 < 1)
                                             {
-                                                num7 /= resourceScale;
-                                                num6 = (int)((float)num6 * resourceScale);
-                                                if (num6 < 1)
-                                                {
-                                                    num6++;
-                                                }
+                                                num6++;
                                             }
-                                            if (num6 > 0)
+                                        }
+                                        if (num6 > 0)
+                                        {
+                                            if (GameUtils.random.RandomFloat <= num7)
                                             {
-                                                if (GameUtils.random.RandomFloat <= num7)
-                                                {
-                                                    itemsToCollect += num6;
-                                                }
+                                                itemsToCollect += num6;
                                             }
-                                            if (newBlock.Equals(BlockValue.Air) && seedValue != null)
+                                        }
+                                        if (newBlock.Equals(BlockValue.Air) && seedValue != null)
+                                        {
+                                            if (itemValue.type == seedValue.type)
                                             {
-                                                if (itemValue.type == seedValue.type)
-                                                {
-                                                    newBlock = itemValue.ToBlockValue();
-                                                    Dbgl($"got replacement seed {newBlock.Block.blockName}");
-                                                    itemsToCollect--;
+                                                newBlock = itemValue.ToBlockValue();
+                                                Dbgl($"got replacement seed {newBlock.Block.blockName}");
+                                                itemsToCollect--;
 
-                                                }
-                                                else
+                                            }
+                                            else
+                                            {
+                                                foreach (var r in CraftingManager.GetRecipes(seedValue.ItemClass.Name))
                                                 {
-                                                    foreach (var r in CraftingManager.GetRecipes(seedValue.ItemClass.Name))
+                                                    if (!r.IsUnlocked(player))
+                                                        continue;
+                                                    //Dbgl($"got replacement {seedValue.ItemClass.Name} recipe with {r.ingredients.Count} ing; first is {r.ingredients[0].count} {r.ingredients[0].itemValue.ItemClass.Name}");
+                                                    if (r.ingredients.Count == 1 && r.ingredients[0].itemValue.type == itemValue.type && itemsToCollect >= r.ingredients[0].count)
                                                     {
-                                                        if (!r.IsUnlocked(player))
-                                                            continue;
-                                                        //Dbgl($"got replacement {seedValue.ItemClass.Name} recipe with {r.ingredients.Count} ing; first is {r.ingredients[0].count} {r.ingredients[0].itemValue.ItemClass.Name}");
-                                                        if (r.ingredients.Count == 1 && r.ingredients[0].itemValue.type == itemValue.type && itemsToCollect >= r.ingredients[0].count)
-                                                        {
 
-                                                            newBlock = seedValue.ToBlockValue();
-                                                            if (!newBlock.Equals(BlockValue.Air))
-                                                            {
-                                                                Dbgl($"got replacement {newBlock.Block.blockName} recipe for {r.ingredients[0].count} {r.ingredients[0].itemValue.ItemClass.Name}");
-                                                                itemsToCollect -= r.ingredients[0].count;
-                                                                break;
-                                                            }
+                                                        newBlock = seedValue.ToBlockValue();
+                                                        if (!newBlock.Equals(BlockValue.Air))
+                                                        {
+                                                            Dbgl($"got replacement {newBlock.Block.blockName} recipe for {r.ingredients[0].count} {r.ingredients[0].itemValue.ItemClass.Name}");
+                                                            itemsToCollect -= r.ingredients[0].count;
+                                                            break;
                                                         }
                                                     }
                                                 }
                                             }
-                                            if (itemsToCollect > 0)
-                                            {
-                                                collectHarvestedItem(player, bv, itemValue, itemsToCollect);
-                                            }
+                                        }
+                                        if (itemsToCollect > 0)
+                                        {
+                                            collectHarvestedItem(player, bv, itemValue, itemsToCollect);
                                         }
                                     }
                                 }
-                                newBlock.rotation = bv.rotation;
-                                if (config.replaceCrop && !newBlock.Equals(BlockValue.Air))
-                                {
-                                    Dbgl($"replacing crop with {newBlock.Block.blockName}");
-                                    GameManager.Instance.SetBlocksRPC(new List<BlockChangeInfo> {  new BlockChangeInfo
-                                    {
-                                        pos = newPos,
-                                        clrIdx = 0,
-                                        bChangeBlockValue = true,
-                                        blockValue = newBlock
-                                    } });
-                                }
-                                else
-                                {
-                                    bv.Block.DamageBlock(player.world, 0, newPos, bv, 1, player.entityId);
-                                }
-                                count++;
                             }
-                            catch (Exception e) 
+                            newBlock.rotation = bv.rotation;
+                            if (config.replaceCrop && !newBlock.Equals(BlockValue.Air))
                             {
+                                Dbgl($"replacing crop with {newBlock.Block.blockName}");
+                                GameManager.Instance.SetBlocksRPC(new List<BlockChangeInfo> {  new BlockChangeInfo
+                                {
+                                    pos = newPos,
+                                    clrIdx = 0,
+                                    bChangeBlockValue = true,
+                                    blockValue = newBlock
+                                } });
                             }
+                            else
+                            {
+                                bv.Block.DamageBlock(player.world, 0, newPos, bv, 1, player.entityId);
+                            }
+                            count++;
+                        }
+                        catch (Exception e) 
+                        {
                         }
                     }
                 }
