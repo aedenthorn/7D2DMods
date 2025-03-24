@@ -32,14 +32,7 @@ namespace QuickHarvest
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
             if (!File.Exists(path))
             {
-                config = new ModConfig()
-                {
-                    harvestTypes = new List<string>()
-                    {
-                        "plantedMyModTypeExample",
-                        "plantedMyModTypePrefix*"
-                    }
-                };
+                config = new ModConfig();
             }
             else
             {
@@ -60,7 +53,7 @@ namespace QuickHarvest
 
             public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || LocalPlayerUI.AnyModalWindowOpen())
+                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || LocalPlayerUI.AnyModalWindowOpen() || !___windowManager.IsKeyShortcutsAllowed())
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.harvestKey) && AedenthornUtils.CheckKeyHeld(config.harvestModKey, false))
                 {
@@ -243,7 +236,9 @@ namespace QuickHarvest
 
         public static bool IsHarvestableBlock(string name)
         {
-            if(name.StartsWith("planted") && name.EndsWith("harvestplayer"))
+            if (!name.StartsWith("planted"))
+                return false;
+            if(name.EndsWith("harvestplayer"))
             {
                 return true;
             }
