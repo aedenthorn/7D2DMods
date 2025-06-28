@@ -178,7 +178,7 @@ namespace RecipeStatsTab
                 return "";
             }
             DisplayInfoEntry displayInfoEntry = itemDisplayEntry.DisplayStats[index];
-            var result = XUiM_ItemStack.GetStatItemValueTextWithCompareInfo(new ItemStack(itemValue, 1), ItemStack.Empty, craftingWindow.xui.playerUI.entityPlayer, displayInfoEntry, false, true);
+            var result = XUiM_ItemStack.GetStatItemValueTextWithCompareInfo(itemValue, ItemValue.None, craftingWindow.xui.playerUI.entityPlayer, displayInfoEntry, false, true);
             return result;
         }
     }

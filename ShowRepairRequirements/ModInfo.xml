@@ -4,5 +4,5 @@
   <DisplayName value="Show Repair Requirements" />
   <Description value="Adds tooltip to show item repair requirements." />
 	<Author value="aedenthorn" />
-	<Version value="0.1.0" />
+	<Version value="0.1.1" />
 </xml>

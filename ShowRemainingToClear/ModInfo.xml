@@ -4,5 +4,5 @@
   <DisplayName value="Show Remaining To Clear" />
   <Description value="Shows the remaining areas to clear in the current quest indicator." />
   <Author value="aedenthorn" />
-  <Version value="0.1.0" />
+  <Version value="0.1.1" />
 </xml>

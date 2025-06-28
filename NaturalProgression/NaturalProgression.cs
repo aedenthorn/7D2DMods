@@ -378,7 +378,12 @@ namespace NaturalProgression
 
         public static void AddSkillXP(EntityPlayer player, SkillType sType, int num)
         {
+
             num = Mathf.RoundToInt(num * config.xpMult);
+            if(skillDict is null)
+            {
+                skillDict = new Dictionary<int, Dictionary<SkillType, int>>();
+            }
             if (!skillDict.TryGetValue(player.entityId, out var dict))
             {
                 skillDict.Add(player.entityId, new Dictionary<SkillType, int>());
@@ -452,7 +457,7 @@ namespace NaturalProgression
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), GameManager.Instance.World.Guid + ".json");
             if (File.Exists(path))
             {
-                skillDict = JsonConvert.DeserializeObject<Dictionary<int, Dictionary<SkillType, int>>>(File.ReadAllText(path));
+                skillDict = JsonConvert.DeserializeObject<Dictionary<int, Dictionary<SkillType, int>>>(File.ReadAllText(path)) ?? new Dictionary<int, Dictionary<SkillType, int>>();
             }
             else
             {
