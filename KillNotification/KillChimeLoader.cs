@@ -28,6 +28,7 @@ namespace KillNotification
                     KillNotification.customChime = true;
                     KillNotification.killChime = DownloadHandlerAudioClip.GetContent(www);
                     KillNotification.Dbgl($"Loaded custom chime {KillNotification.customChimePath}");
+                    Destroy(this);
                 }
             }
         }

@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -35,7 +34,7 @@ namespace ShowRepairRequirements
                     return;
                 if (__instance.xui.currentToolTip != null)
                 {
-                    if (_isOver)
+                    if (_isOver && __instance.ItemActionEntry.ItemController is XUiC_ItemStack)
                     {
                         string tooltip = "";
                         ItemClass forId = ItemClass.GetForId(((XUiC_ItemStack)__instance.ItemActionEntry.ItemController).ItemStack.itemValue.type);

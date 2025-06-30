@@ -326,10 +326,6 @@ namespace NaturalProgression
             {
                 currentSkillType = SkillType.craftingHarvestingTools;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("harvestingSkill")))
-            {
-                currentSkillType = SkillType.craftingHarvestingTools;
-            }
             else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("salvagingSkill")))
             {
                 currentSkillType = SkillType.craftingSalvageTools;
@@ -386,8 +382,11 @@ namespace NaturalProgression
             }
             if (!skillDict.TryGetValue(player.entityId, out var dict))
             {
-                skillDict.Add(player.entityId, new Dictionary<SkillType, int>());
-                skillDict[player.entityId].Add(sType, num);
+                dict = new Dictionary<SkillType, int>()
+                {
+                    { sType, num }
+                };
+                skillDict[player.entityId] = dict;
             }
             else
             {
@@ -445,7 +444,7 @@ namespace NaturalProgression
         public static void SaveExpFile()
         {
             var json = JsonConvert.SerializeObject(skillDict, Formatting.Indented);
-            Dbgl("Saving exp file");
+            //Dbgl("Saving exp file");
             //Dbgl($"{json}");
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), GameManager.Instance.World.Guid + ".json");
 

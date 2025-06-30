@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
-using static EntityVehicle;
 using Path = System.IO.Path;
 
 namespace VehicleRadio
@@ -148,7 +147,7 @@ namespace VehicleRadio
         {
             static void Postfix(EntityVehicle __instance)
             {
-                if (!config.modEnabled || stations.Count == 0 || !__instance.LocalPlayerIsOwner() || (config.autoToggle && !__instance.HasDriver))
+                if (!config.modEnabled || stations.Count == 0 || !__instance.LocalPlayerIsOwner() || (config.autoToggle && !__instance.HasDriver) || !vehicleTypes.Contains(__instance.GetType()))
                 {
                     return;
                 }

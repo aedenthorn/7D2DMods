@@ -50,6 +50,7 @@ namespace KillNotification
                 __instance.LoadData<AudioClip>(config.notificationSound, delegate (AudioClip o)
                 {
                     killChime = o;
+                    Dbgl($"Loaded chime {config.notificationSound}");
                 });
             }
         }
@@ -59,11 +60,20 @@ namespace KillNotification
         {
             static void Postfix(EntityAlive __instance, EntityAlive killer)
             {
-                if (!config.modEnabled || killer != GameManager.Instance.World.GetPrimaryPlayer())
+                if (!config.modEnabled)
                     return;
+                if(killer != GameManager.Instance.World.GetPrimaryPlayer())
+                {
+                    Dbgl("not the killer");
+                }
                 if (killChime != null)
                 {
+                    Dbgl($"playing chime {killChime} at {config.chimeVolume}");
                     Manager.PlayXUiSound(killChime, config.chimeVolume);
+                }
+                else
+                {
+                    Dbgl("kill chime is null");
                 }
                 AddIconNotification(Localization.Get(__instance.EntityName, false));
 

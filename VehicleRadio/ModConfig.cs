@@ -5,7 +5,6 @@
         public bool modEnabled = true;
         public bool isDebug = true;
  
-        public string spawnTraderKey = ".";
         public string nextStationKey = "left";
         public string prevStationKey = "right";
         public string toggleRadio = "end";

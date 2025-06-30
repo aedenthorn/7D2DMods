@@ -180,12 +180,12 @@ namespace PickupBlocks
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(World ___m_World)
+            public static void Postfix(World ___m_World)
             {
-                if (___m_World is null || ___m_World.GetPrimaryPlayer() is null)
+                if (___m_World is null || ___m_World.GetPrimaryPlayer() is null || ___m_World.GetPrimaryPlayer().windowManager.IsModalWindowOpen())
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.ToggleModKey))
                 {
@@ -194,18 +194,18 @@ namespace PickupBlocks
                     {
                         config.modEnabled = true;
                         config.RestrictBlocksToLandClaimArea = true;
-                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionEnabledText, true);
+                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionEnabledText, true);
                     }
                     else if (config.AllowToggleLandClaimRestriction)
                     {
                         if (config.RestrictBlocksToLandClaimArea)
                         {
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.RestrictionDisabledText, true);
+                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionDisabledText, true);
                             config.RestrictBlocksToLandClaimArea = false;
                         }
                         else
                         {
-                            GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText, true);
+                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.DisabledText, true);
                             config.RestrictBlocksToLandClaimArea = true;
                             config.modEnabled = false;
                         }
@@ -213,7 +213,7 @@ namespace PickupBlocks
                     else 
                     {
                         config.modEnabled = false;
-                        GameManager.ShowTooltip(GameManager.Instance.World.GetPrimaryPlayer(), config.DisabledText, true);
+                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.DisabledText, true);
                     }
                     SaveConfig();
                 }

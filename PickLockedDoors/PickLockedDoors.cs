@@ -106,7 +106,11 @@ namespace PickLockedDoors
                 if (playerUI.xui.PlayerInventory.GetItemCount(item) == 0)
                 {
                     playerUI.xui.CollectedItemList.AddItemStack(new ItemStack(item, 0), true);
-                    GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("ttLockpickMissing"));
+                    try
+                    {
+                        GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("ttLockpickMissing"));
+                    }
+                    catch { }
                     __result = true;
                     return;
                 }
@@ -179,7 +183,12 @@ namespace PickLockedDoors
                 Manager.BroadcastPlayByLocalPlayer(blockPos.ToVector3() + Vector3.one * 0.5f, "Misc/locked");
                 ItemStack itemStack = new ItemStack(itemValue, 1);
                 uiforPlayer.xui.PlayerInventory.RemoveItem(itemStack);
-                GameManager.ShowTooltip(entityPlayerLocal, Localization.Get("ttLockpickBroken"));
+                try
+                {
+                    GameManager.ShowTooltip(entityPlayerLocal as EntityPlayerLocal, Localization.Get("ttLockpickBroken"));
+                }
+                catch { }
+
                 uiforPlayer.xui.CollectedItemList.RemoveItemStack(itemStack);
                 float lockPickTime;
                 if (!blockValue.Block.Properties.Values.TryGetValue("LockPickTime", out string timeString))
