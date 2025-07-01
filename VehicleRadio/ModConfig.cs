@@ -5,8 +5,8 @@
         public bool modEnabled = true;
         public bool isDebug = true;
  
-        public string nextStationKey = "left";
-        public string prevStationKey = "right";
+        public string nextStationKey = "right";
+        public string prevStationKey = "left";
         public string toggleRadio = "end";
         public string volumeUpKey = "page up";
         public string volumeDownKey = "page down";

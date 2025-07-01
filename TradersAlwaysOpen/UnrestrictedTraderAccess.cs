@@ -76,10 +76,10 @@ namespace UnrestrictedTraderAccess
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
                 if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null)
                     return;
@@ -205,6 +205,7 @@ namespace UnrestrictedTraderAccess
                     {
                         Dbgl("Adding method to override damage protection");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.ItemActionAttackHitOverride))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_1));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
                         break;
                     }
@@ -214,7 +215,7 @@ namespace UnrestrictedTraderAccess
             }
         }
 
-        public static bool ItemActionAttackHitOverride(bool result, WorldRayHitInfo hitInfo)
+        public static bool ItemActionAttackHitOverride(bool result, WorldRayHitInfo hitInfo, int _attackerEntityId)
         {
 
             if (!config.modEnabled || !result)
@@ -222,7 +223,17 @@ namespace UnrestrictedTraderAccess
 
             if (config.removeDamageProtection)
                 return false;
-
+            EntityAlive entityAlive = GameManager.Instance.World.GetEntity(_attackerEntityId) as EntityAlive;
+            if (entityAlive is EntityPlayer && config.alwaysAllowPlayerDamage)
+            {
+                Dbgl($"Allowing damage by player");
+                return false;
+            }
+            if (!(entityAlive is EntityPlayer) && config.neverAllowNonPlayerDamage)
+            {
+                Dbgl($"Preventing damage by non-player");
+                return true;
+            }
             Vector3i vector3i = hitInfo.hit.blockPos;
             var name = ItemClass.GetForId(GameManager.Instance.World.ChunkClusters[hitInfo.hit.clrIdx].GetBlock(vector3i).type).Name;
             LoadConfig();
