@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using Twitch;
 using UAI;
 using UnityEngine;
 
@@ -59,7 +60,7 @@ namespace NaturalProgression
 
 
 
-        [HarmonyPatch(typeof(BlockProjectileMoveScript), nameof(BlockProjectileMoveScript.checkCollision))]
+        //[HarmonyPatch(typeof(BlockProjectileMoveScript), nameof(BlockProjectileMoveScript.checkCollision))]
         static class BlockProjectileMoveScript_checkCollision_Patch
         {
             static void Prefix(BlockProjectileMoveScript __instance)
@@ -81,6 +82,33 @@ namespace NaturalProgression
                 currentSkillType = SkillType.none;
             }
         }
+
+        //[HarmonyPatch(typeof(EntityBuffs), nameof(EntityBuffs.OnDeath))]
+        static class EntityBuffs_OnDeath_Patch
+        {
+            static void Prefix(EntityBuffs __instance, EntityAlive _entityThatKilledMe, FastTags<TagGroup.Global> _damageTypeTags)
+            {
+                if (!config.modEnabled || _entityThatKilledMe == null || !(_entityThatKilledMe is EntityPlayerLocal entityPlayerLocal))
+                    return;
+
+                if (__instance.parent.Buffs.GetCustomVar("ETrapHit") == 1f)
+                {
+                    float value = EffectManager.GetValue(PassiveEffects.ElectricalTrapXP, entityPlayerLocal.inventory.holdingItemItemValue, 0f, entityPlayerLocal, null, default(FastTags<TagGroup.Global>), true, true, true, true, true, 1, true, false);
+                    if (value > 0f)
+                    {
+                        currentSkillType = SkillType.craftingTraps;
+                    }
+                }
+                else
+                {
+                    SetSkillType(entityPlayerLocal.inventory.holdingItemItemValue.ItemClass.ItemTags, false);
+                }
+            }
+            static void Postfix()
+            {
+                currentSkillType = SkillType.none;
+            }
+        }
         [HarmonyPatch(typeof(EntityPlayerLocal), nameof(EntityPlayerLocal.GiveExp))]
         static class EntityPlayerLocal_GiveExp_Patch
         {
@@ -93,7 +121,7 @@ namespace NaturalProgression
                 {
                     return;
                 }
-                SetSkillType(data.CraftedItemStack.itemValue.ItemClass);
+                SetSkillType(data.CraftedItemStack.itemValue.ItemClass.ItemTags, data.CraftedItemStack.itemValue.ItemClass.pArmor != null);
             }
             static void Postfix()
             {
@@ -107,7 +135,30 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled)
                     return;
-                SetSkillType(_ic);
+                SetSkillType(_ic.ItemTags, _ic.pArmor != null);
+            }
+            static void Postfix()
+            {
+                currentSkillType = SkillType.none;
+            }
+        }
+        [HarmonyPatch(typeof(ItemActionAttack), nameof(ItemActionAttack.Hit))]
+        static class ItemActionAttack_Hit_Patch
+        {
+            static void Prefix(ItemActionAttack __instance, int _attackerEntityId, ItemActionAttack.AttackHitInfo _attackDetails)
+            {
+                if (!config.modEnabled)
+                    return;
+                EntityPlayerLocal player = GameManager.Instance.World.GetEntity(_attackerEntityId) as EntityPlayerLocal;
+                if (player is null)
+                    return;
+                if (player.inventory.holdingItem is null)
+                    return;
+
+                if ((!_attackDetails.WeaponTypeTag.Equals(ItemActionAttack.ThrownTag) && !_attackDetails.WeaponTypeTag.Equals(ItemActionAttack.RangedTag)))
+                    return;
+                SetSkillType(player.inventory.holdingItem.ItemTags, false);
+
             }
             static void Postfix()
             {
@@ -121,7 +172,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
 
             }
             static void Postfix()
@@ -136,7 +187,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
 
             }
             static void Postfix()
@@ -151,7 +202,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
 
             }
             static void Postfix()
@@ -166,7 +217,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
             }
             static void Postfix()
             {
@@ -180,7 +231,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
 
             }
             static void Postfix()
@@ -195,7 +246,7 @@ namespace NaturalProgression
             {
                 if (!config.modEnabled || !__instance.bUpgradeCountChanged || !(_actionData.invData.holdingEntity is EntityPlayerLocal))
                     return;
-                SetSkillType(_actionData.invData.item);
+                SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
 
             }
             static void Postfix()
@@ -216,7 +267,7 @@ namespace NaturalProgression
                 }
                 else
                 {
-                    SetSkillType(_actionData.invData.item);
+                    SetSkillType(_actionData.invData.item.ItemTags, _actionData.invData.item.pArmor != null);
                 }
             }
             static void Postfix()
@@ -268,108 +319,114 @@ namespace NaturalProgression
             }
         }
 
-        private static void SetSkillType(ItemClass itemClass)
+        public static void SetSkillType(FastTags<TagGroup.Global> tags, bool armor)
         {
-            if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("rifleSkill")))
+            if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("rifleSkill")))
             {
                 currentSkillType = SkillType.craftingRifles;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("machinegunSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("machinegunSkill")))
             {
                 currentSkillType = SkillType.craftingMachineGuns;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("explosivesSkill,Mine")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("explosivesSkill,Mine")))
             {
                 currentSkillType = SkillType.craftingExplosives;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("bowSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("bowSkill")))
             {
                 currentSkillType = SkillType.craftingBows;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("roboticsSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("roboticsSkill")))
             {
                 currentSkillType = SkillType.craftingRobotics;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("handgunSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("handgunSkill")))
             {
                 currentSkillType = SkillType.craftingHandguns;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("shotgunSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("shotgunSkill")))
             {
                 currentSkillType = SkillType.craftingShotguns;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("bladeSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("bladeSkill")))
             {
                 currentSkillType = SkillType.craftingBlades;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("spearSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("spearSkill")))
             {
                 currentSkillType = SkillType.craftingSpears;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("clubSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("clubSkill")))
             {
                 currentSkillType = SkillType.craftingClubs;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("sledgeSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("sledgeSkill")))
             {
                 currentSkillType = SkillType.craftingSledgehammers;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("knuckleSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("knuckleSkill")))
             {
                 currentSkillType = SkillType.craftingKnuckles;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("repairingSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("repairingSkill")))
             {
                 currentSkillType = SkillType.craftingRepairTools;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("harvestingSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("harvestingSkill")))
             {
                 currentSkillType = SkillType.craftingHarvestingTools;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("salvagingSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("salvagingSkill")))
             {
                 currentSkillType = SkillType.craftingSalvageTools;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("medicalSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("medicalSkill")))
             {
                 currentSkillType = SkillType.craftingMedical;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("medicalSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("medicalSkill")))
             {
                 currentSkillType = SkillType.craftingMedical;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("foodSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("foodSkill")))
             {
                 currentSkillType = SkillType.craftingFood;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("foodSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("foodSkill")))
             {
                 currentSkillType = SkillType.craftingFood;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("electricianSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("electricianSkill")))
             {
                 currentSkillType = SkillType.craftingElectrician;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("workstationSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("workstationSkill")))
             {
                 currentSkillType = SkillType.craftingWorkstations;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("vehiclesSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("vehiclesSkill")))
             {
                 currentSkillType = SkillType.craftingVehicles;
             }
-            else if (itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse("trapsSkill")))
+            else if (tags.Test_AnySet(FastTags<TagGroup.Global>.Parse("trapsSkill")))
             {
                 currentSkillType = SkillType.craftingTraps;
             }
-            else if (itemClass.pArmor != null)
+            else if (armor)
             {
                 currentSkillType = SkillType.craftingArmor;
             }
             else
             {
                 currentSkillType = SkillType.none;
+                //Dbgl($"Set skill to none");
+                //Dbgl(Environment.StackTrace);
+
+                return;
             }
+            //Dbgl($"Set skill to {currentSkillType}");
+
         }
 
         public static void AddSkillXP(EntityPlayer player, SkillType sType, int num)

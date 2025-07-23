@@ -4,8 +4,11 @@ using Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using UnityEngine;
+using static LightingAround;
 using Path = System.IO.Path;
 
 namespace StabilityTweaks
@@ -37,7 +40,7 @@ namespace StabilityTweaks
                 return false;
             }
         }
-        [HarmonyPatch(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock))]
+        //[HarmonyPatch(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock))]
         static class BlockValue_GetForceToOtherBlock_Patch
         {
 
@@ -47,6 +50,57 @@ namespace StabilityTweaks
                     return;
                 __result = Mathf.RoundToInt(__result * config.stabilityModifier);
             }
+        }
+        [HarmonyPatch(typeof(StabilityCalculator), nameof(StabilityCalculator.CalcPhysicsStabilityToFall))]
+        static class StabilityCalculator_CalcPhysicsStabilityToFall_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.modEnabled)
+                    return codes;
+                Dbgl("Transpiling StabilityCalculator.CalcPhysicsStabilityToFall");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Call && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock)))
+                    {
+                        Dbgl("Adding method to modify force to other block");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(StabilityTweaks), nameof(StabilityTweaks.GetStabilityMod))));
+                        i++;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        [HarmonyPatch(typeof(StabilityCalculator), nameof(StabilityCalculator.GetBlockStability), new Type[] { typeof(Vector3i), typeof(BlockValue) })]
+        static class StabilityCalculator_GetBlockStability_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                var codes = new List<CodeInstruction>(instructions);
+                if (!config.modEnabled)
+                    return codes;
+                Dbgl("Transpiling StabilityCalculator.GetBlockStability");
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Call && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock)))
+                    {
+                        Dbgl("Adding method to modify force to other block");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(StabilityTweaks), nameof(StabilityTweaks.GetStabilityMod))));
+                        i++;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+
+        private static int GetStabilityMod(int value)
+        {
+            if (!config.modEnabled || config.stabilityModifier < 0)
+                return value;
+            return Mathf.RoundToInt(value * config.stabilityModifier);
         }
 
         public void LoadConfig()

@@ -3,14 +3,9 @@ using Newtonsoft.Json;
 using Platform;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Xml.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
-using static Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics;
 using Path = System.IO.Path;
 
 namespace QuickStorage
@@ -60,7 +55,7 @@ namespace QuickStorage
 
             public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
+                if (!config.modEnabled || ___m_World?.GetPrimaryPlayer()?.PlayerUI?.windowManager?.IsModalWindowOpen() != false)
                     return;
 
                 if(config.storeKey == config.pullKey)

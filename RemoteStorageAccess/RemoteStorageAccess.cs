@@ -34,6 +34,9 @@ namespace RemoteStorageAccess
         public static RemoteStorageAccess context;
         public static Mod mod;
 
+        public static int frameCount = -1;
+        public static Vector2 lastCursorPos;
+
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -105,8 +108,18 @@ namespace RemoteStorageAccess
 
             static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
             {
+                if (frameCount > -1)
+                {
+                    frameCount++;
+                    MouseLib.SetCursorPosition((int)lastCursorPos.x, (int)lastCursorPos.y);
+                    if (frameCount > 1)
+                    {
+                        frameCount = -1;
+                    }
+                }
                 if (!config.modEnabled || ___m_World?.GetPrimaryPlayer() == null)
                     return;
+
                 if (nameDictPath is null)
                 {
                     nameDictPath = Path.Combine(AedenthornUtils.GetAssetPath(context, true), ___m_World.Guid + ".json");
@@ -418,8 +431,12 @@ namespace RemoteStorageAccess
 
             if (sortedStorageList.Count > 0)
             {
-                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
-                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, GameManager.Instance.World.GetPrimaryPlayer().entityId, "container");
+                frameCount = 0;
+                var player = GameManager.Instance.World.GetPrimaryPlayer();
+                var ui = LocalPlayerUI.GetUIForPlayer(player);
+                lastCursorPos = MouseLib.GetGlobalMousePosition();
+                ui.windowManager.CloseAllOpenWindows(null, false);
+                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, player.entityId, "container");
 
             }
         }
@@ -428,9 +445,13 @@ namespace RemoteStorageAccess
 
             if (vehicleList.Count > 0)
             {
-                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
+                frameCount = 0;
+                var player = GameManager.Instance.World.GetPrimaryPlayer();
+                var ui = LocalPlayerUI.GetUIForPlayer(player);
+                lastCursorPos = MouseLib.GetGlobalMousePosition();
+                ui.windowManager.CloseAllOpenWindows(null, false);
                 var ve = vehicleList[Mathf.Clamp(currentVehicleStorage, 0, vehicleList.Count - 1)];
-                ve.OnEntityActivated(9, ve.GetBlockPosition(), GameManager.Instance.World.GetPrimaryPlayer());
+                ve.OnEntityActivated(9, ve.GetBlockPosition(), player);
 
             }
         }

@@ -51,8 +51,11 @@ namespace RecipeStatsTab
                 if (!config.modEnabled)
                     return;
                 showStats = false;
-                __instance.GetChildById("recipeStatsButton").OnPress += StatsButton_OnPress;
-                ((XUiV_Button)__instance.GetChildById("recipeStatsButton").ViewComponent).Selected = false;
+                var button = __instance.GetChildById("recipeStatsButton");
+                if (button is null)
+                    return;
+                button.OnPress += StatsButton_OnPress;
+                ((XUiV_Button)button.ViewComponent).Selected = false;
                 __instance.IsDirty = true;
             }
         }

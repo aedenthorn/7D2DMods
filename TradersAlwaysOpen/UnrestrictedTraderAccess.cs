@@ -73,6 +73,20 @@ namespace UnrestrictedTraderAccess
                 original: AccessTools.Method(typeof(World), nameof(World.CanPlaceBlockAt)),
                 transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.PlaceMethodTranspiler)) 
             );
+            harmony.Patch(
+                original: AccessTools.Method(typeof(WallVolume), nameof(WallVolume.SetMinMax)),
+                prefix: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.WallVolume_SetMinMax_Prefix)) 
+            );
+        }
+
+        private static bool WallVolume_SetMinMax_Prefix(WallVolume __instance)
+        {
+            if (!config.modEnabled || !GameManager.Instance.World.IsWithinTraderArea(World.worldToBlockPos((__instance.BoxMin + __instance.BoxMax).ToVector3() * 0.5f)))
+                return true;
+            __instance.BoxMin = Vector3i.zero;
+            __instance.BoxMax = Vector3i.zero;
+            __instance.Center = Vector3.zero;
+            return false;
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]
