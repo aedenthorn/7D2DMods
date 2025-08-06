@@ -101,6 +101,9 @@ namespace QuickStorage
         }
         public static void StoreItems(World world)
         {
+            var player = world?.GetPrimaryPlayer();
+            if (player is null)
+                return;
             Dbgl($"Storing items");
             LoadConfig();
             storageList.Clear();
@@ -141,16 +144,14 @@ namespace QuickStorage
 
                 }
             }
-            var pos = world.GetPrimaryPlayer().position;
+            var pos = player.position;
             storageList.Sort(delegate (Vector3i a, Vector3i b) {
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });
             Dbgl($"Got {storageList.Count} storages"); 
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
-            var player = world.GetPrimaryPlayer();
             var bag = player.bag;
-            var ctrl = ((XUiWindowGroup)player.PlayerUI.windowManager.GetWindow("backpack")).Controller.GetChildByType<XUiC_Backpack>();
             ItemStack[] slots = bag.GetSlots();
             for (int i = config.skipSlots; i < slots.Length; i++)
             {

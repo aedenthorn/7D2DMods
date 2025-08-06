@@ -73,10 +73,10 @@ namespace UnrestrictedTraderAccess
                 original: AccessTools.Method(typeof(World), nameof(World.CanPlaceBlockAt)),
                 transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.PlaceMethodTranspiler)) 
             );
-            harmony.Patch(
-                original: AccessTools.Method(typeof(WallVolume), nameof(WallVolume.SetMinMax)),
-                prefix: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.WallVolume_SetMinMax_Prefix)) 
-            );
+            //harmony.Patch(
+            //    original: AccessTools.Method(typeof(WallVolume), nameof(WallVolume.SetMinMax)),
+            //    prefix: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.WallVolume_SetMinMax_Prefix)) 
+            //);
         }
 
         private static bool WallVolume_SetMinMax_Prefix(WallVolume __instance)
