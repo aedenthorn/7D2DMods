@@ -150,12 +150,12 @@ namespace CraftFromContainers
             }
         }
         
-        [HarmonyPatch(typeof(XUiC_IngredientEntry), nameof(XUiC_IngredientEntry.GetBindingValue))]
-        static class XUiC_IngredientEntry_GetBindingValue_Patch
+        [HarmonyPatch(typeof(XUiC_IngredientEntry), nameof(XUiC_IngredientEntry.GetBindingValueInternal))]
+        static class XUiC_IngredientEntry_GetBindingValueInternal_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                Dbgl("Transpiling XUiC_IngredientEntry.GetBindingValue");
+                Dbgl("Transpiling XUiC_IngredientEntry.GetBindingValueInternal");
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {

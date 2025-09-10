@@ -4,6 +4,7 @@ using Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using Path = System.IO.Path;
@@ -120,7 +121,7 @@ namespace QuickStorage
                     foreach (var kvp in c.tileEntities.dict)
                     {
                         var loc = kvp.Value.ToWorldPos();
-                        if (config.range >= 0 && Vector3.Distance(world.GetPrimaryPlayer().position, loc) > config.range)
+                        if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
                             continue;
                         var entity = (kvp.Value as TileEntityComposite);
                         if (entity != null)
@@ -145,6 +146,8 @@ namespace QuickStorage
                 }
             }
             var pos = player.position;
+            if (!storageList.Any())
+                return;
             storageList.Sort(delegate (Vector3i a, Vector3i b) {
                 return Vector3.Distance(a, pos).CompareTo(Vector3.Distance(b, pos));
             });

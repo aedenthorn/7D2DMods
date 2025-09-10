@@ -45,7 +45,7 @@ namespace ShowRemainingToClear
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
-        [HarmonyPatch(typeof(XUiC_QuestTrackerObjectiveEntry), nameof(XUiC_QuestTrackerObjectiveEntry.GetBindingValue))]
+        [HarmonyPatch(typeof(XUiC_QuestTrackerObjectiveEntry), nameof(XUiC_QuestTrackerObjectiveEntry.GetBindingValueInternal))]
         public static class XUiC_QuestObjectiveEntry_GetBindingValue_Patch
         {
             public static bool Prefix(XUiC_QuestTrackerObjectiveEntry __instance, ref string value, string bindingName)

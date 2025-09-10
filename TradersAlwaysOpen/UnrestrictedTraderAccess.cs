@@ -475,7 +475,7 @@ namespace UnrestrictedTraderAccess
             }
         }
         
-        [HarmonyPatch(typeof(XUiC_Location), nameof(XUiC_Location.GetBindingValue))]
+        [HarmonyPatch(typeof(XUiC_Location), nameof(XUiC_Location.GetBindingValueInternal))]
         static class XUiC_Location_GetBindingValue_Patch
         {
 

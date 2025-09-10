@@ -4,5 +4,5 @@
   <DisplayName value="Unrestricted Trader Access" />
   <Description value="Sets traders to never close and optionally removes build protection in trader area." />
   <Author value="aedenthorn" />
-  <Version value="0.3.0" />
+  <Version value="0.4.0" />
 </xml>

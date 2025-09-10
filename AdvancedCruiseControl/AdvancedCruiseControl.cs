@@ -276,7 +276,7 @@ namespace AdvancedCruiseControl
                 }
             }
         }
-        [HarmonyPatch(typeof(XUiC_HUDStatBar), nameof(XUiC_HUDStatBar.GetBindingValue))]
+        [HarmonyPatch(typeof(XUiC_HUDStatBar), nameof(XUiC_HUDStatBar.GetBindingValueInternal))]
         static class XUiC_VehicleStats_GetBindingValue_Patch
         {
             public static void Postfix(XUiC_HUDStatBar __instance, ref string value, string bindingName)

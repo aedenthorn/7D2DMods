@@ -112,7 +112,7 @@ namespace RecipeStatsTab
                 StatsButton_OnPress(__instance, 0);
             }
         }
-        [HarmonyPatch(typeof(XUiC_CraftingInfoWindow), nameof(XUiC_CraftingInfoWindow.GetBindingValue))]
+        [HarmonyPatch(typeof(XUiC_CraftingInfoWindow), nameof(XUiC_CraftingInfoWindow.GetBindingValueInternal))]
         public static class XUiC_CraftingInfoWindow_GetBindingValue_Patch
         {
             public static bool Prefix(XUiC_CraftingInfoWindow __instance, ref string value, string bindingName, ref bool __result)
