@@ -486,6 +486,26 @@ namespace UnrestrictedTraderAccess
                 _value += config.locationDamageSuffix;
             }
         }
+        [HarmonyPatch(typeof(Chunk), nameof(Chunk.GetWallVolumes))]
+        static class Chunk_GetWallVolumes_Patch
+        {
+
+            static void Postfix(Chunk __instance, ref List<int> __result)
+            {
+                if (!config.modEnabled || !config.removeWallVolumes || __result?.Any() != true)
+                    return;
+                for(int i = __result.Count - 1; i >= 0; i--)
+                {
+                    int num = __result[i];
+                    WallVolume wallVolume = GameManager.Instance.World.GetWallVolume(num);
+                    if(wallVolume != null && GameManager.Instance.World.IsWithinTraderArea(new Vector3i(wallVolume.Center)))
+                    {
+                        Dbgl("Removing wall in trader area");
+                        __result.RemoveAt(i);
+                    }
+                }
+            }
+        }
 
         public static void LoadConfig()
         {
