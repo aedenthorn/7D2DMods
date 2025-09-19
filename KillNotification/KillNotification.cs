@@ -40,20 +40,6 @@ namespace KillNotification
             }
         }
 
-        [HarmonyPatch(typeof(XUi), nameof(XUi.Init))]
-        static class XUi_Init_Patch
-        {
-            static void Postfix(XUi __instance)
-            {
-                if (!config.modEnabled || customChime || string.IsNullOrEmpty(config.notificationSound))
-                    return;
-                __instance.LoadData<AudioClip>(config.notificationSound, delegate (AudioClip o)
-                {
-                    killChime = o;
-                    Dbgl($"Loaded chime {config.notificationSound}");
-                });
-            }
-        }
 
         [HarmonyPatch(typeof(EntityAlive), nameof(EntityAlive.AwardKill))]
         static class EntityAlive_AwardKill_Patch
@@ -62,22 +48,76 @@ namespace KillNotification
             {
                 if (!config.modEnabled)
                     return;
-                if(killer != GameManager.Instance.World.GetPrimaryPlayer())
+                var isKiller = killer == GameManager.Instance.World.GetPrimaryPlayer();
+                if (!config.notifyAllKills && !isKiller)
+                    return;
+                if (config.chimeAllKills || isKiller)
                 {
-                    Dbgl("not the killer");
-                }
-                if (killChime != null)
-                {
-                    Dbgl($"playing chime {killChime} at {config.chimeVolume}");
-                    Manager.PlayXUiSound(killChime, config.chimeVolume);
-                }
-                else
-                {
-                    Dbgl("kill chime is null");
+                    if (killChime != null)
+                    {
+                        Manager.PlayXUiSound(killChime, config.chimeVolume);
+                    }
+                    else if (!customChime && !string.IsNullOrEmpty(config.notificationSound))
+                    {
+                        if (!PlayInsidePlayerHead(config.notificationSound, -1, 0f, false, false))
+                        {
+                            Dbgl($"failed to play kill chime {config.notificationSound}");
+                        }
+                    }
                 }
                 AddIconNotification(Localization.Get(__instance.EntityName, false));
 
             }
+        }
+        public static bool PlayInsidePlayerHead(string soundGroupName, int entityID = -1, float delay = 0f, bool isLooping = false, bool isUnique = false)
+        {
+            Entity entity = ((entityID >= 0) ? GameManager.Instance.World.GetEntity(entityID) : null);
+            Manager.ConvertName(ref soundGroupName, entity);
+            XmlData xmlData;
+            if (!Manager.audioData.TryGetValue(soundGroupName, out xmlData))
+            {
+                return false;
+            }
+            if (!xmlData.Update())
+            {
+                return false;
+            }
+            ClipSourceMap randomClip = xmlData.GetRandomClip();
+            if (randomClip == null)
+            {
+                return false;
+            }
+            AudioSource audioSource = Manager.LoadAudio(randomClip.forceLoop, 0f, randomClip.clipName, randomClip.audioSourceName);
+            if (audioSource == null)
+            {
+                return false;
+            }
+            GameObject gameObject = audioSource.gameObject;
+            Transform transform = audioSource.transform;
+            EntityAlive entityAlive = Manager.LocalPlayer();
+            Transform transform2 = entityAlive.transform;
+            transform.SetParent(transform2, false);
+            transform.position = transform2.position;
+            audioSource.volume = config.chimeVolume;
+            Manager.SetPitch(audioSource, xmlData, config.chimePitch);
+            if (xmlData.vibratesController)
+            {
+                GameManager.Instance.triggerEffectManager.SetAudioRumbleSource(audioSource, xmlData.vibrationStrengthMultiplier, false);
+            }
+            if (isUnique)
+            {
+                if (Manager.uniqueSrc != null)
+                {
+                    Manager.StopSource(Manager.uniqueSrc);
+                }
+                Manager.uniqueSrc = audioSource;
+            }
+            new PlayAndCleanup(gameObject, audioSource, 0f, delay, false, false);
+            if (GamePrefs.GetBool(EnumGamePrefs.OptionsSubtitlesEnabled) && randomClip.hasSubtitle)
+            {
+                GameManager.ShowSubtitle(LocalPlayerUI.primaryUI.xui, Manager.GetFormattedSubtitleSpeaker(randomClip.subtitleID), Manager.GetFormattedSubtitle(randomClip.subtitleID), audioSource.clip.length, false);
+            }
+            return true;
         }
         public static void AddIconNotification(string killed)
         {

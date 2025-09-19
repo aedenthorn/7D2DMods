@@ -115,15 +115,20 @@ namespace QuickStorage
 
                 var cc = world.ChunkClusters[i];
 
-                foreach (var c in cc.chunks.dict.Values)
+                foreach(var key in cc.chunks.dict.Keys.ToArray())
                 {
+                    if (!cc.chunks.dict.TryGetValue(key, out var c))
+                        continue;
                     c.EnterReadLock();
-                    foreach (var kvp in c.tileEntities.dict)
+                    foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
                     {
-                        var loc = kvp.Value.ToWorldPos();
+                        if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
+                            continue;
+
+                        var loc = tileEntity.ToWorldPos();
                         if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
                             continue;
-                        var entity = (kvp.Value as TileEntityComposite);
+                        var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
                             var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
@@ -208,12 +213,14 @@ namespace QuickStorage
                 continue;
             }
 
-            foreach (var kvp in dict)
+            foreach (var key in dict.Keys.ToArray())
             {
-                var itemName = ItemClass.GetForId(kvp.Key).Name;
+                if (!dict.TryGetValue(key, out var value))
+                    continue;
+                var itemName = ItemClass.GetForId(key).Name;
 
-                Dbgl($"Stored {kvp.Value} of item {itemName}");
-                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(kvp.Key), -kvp.Value), false);
+                Dbgl($"Stored {value} of item {itemName}");
+                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(key), -value), false);
             }
 
             Dbgl($"Stored {dict.Count} items");
@@ -230,13 +237,17 @@ namespace QuickStorage
 
                 var cc = world.ChunkClusters[i];
 
-                foreach (var c in cc.chunks.dict.Values)
+                foreach (var key in cc.chunks.dict.Keys.ToArray())
                 {
+                    if (!cc.chunks.dict.TryGetValue(key, out var c))
+                        continue;
                     c.EnterReadLock();
-                    foreach (var kvp in c.tileEntities.dict)
+                    foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
                     {
-                        var loc = kvp.Value.ToWorldPos();
-                        var entity = (kvp.Value as TileEntityComposite);
+                        if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
+                            continue;
+                        var loc = tileEntity.ToWorldPos();
+                        var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
                             var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
@@ -336,12 +347,14 @@ namespace QuickStorage
             next:
                 continue;
             }
-            foreach(var kvp in dict)
+            foreach (var key in dict.Keys.ToArray())
             {
-                var itemName = ItemClass.GetForId(kvp.Key).Name;
+                if (!dict.TryGetValue(key, out var value))
+                    continue;
+                var itemName = ItemClass.GetForId(key).Name;
 
-                Dbgl($"Pulled {kvp.Value} of item {itemName}");
-                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(kvp.Key), kvp.Value), false);
+                Dbgl($"Pulled {value} of item {itemName}");
+                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(key), value), false);
             }
 
             Dbgl($"Pulled {dict.Count} items");
