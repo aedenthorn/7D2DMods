@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Xml.Linq;
 using UnityEngine;
 using Path = System.IO.Path;
 
@@ -33,13 +34,19 @@ namespace ToggleHoldingItem
         }
 
         [HarmonyPatch(typeof(PlayerMoveController), nameof(PlayerMoveController.Update))]
-        static class GameManager_Update_Patch
+        static class PlayerMoveController_Update_Patch
         {
 
             static void Prefix(PlayerMoveController __instance)
             {
                 if (!config.modEnabled || __instance.entityPlayerLocal.AttachedToEntity != null)
                     return;
+                if (AedenthornUtils.CheckKeyDown(config.toggleKey))
+                {
+                    Dbgl("action triggered");
+                    ToggleItem();
+                    return;
+                }
                 int newSlot = __instance.playerInput.InventorySlotWasPressed;
                 if (newSlot >= 0)
                 {
@@ -61,24 +68,29 @@ namespace ToggleHoldingItem
                 }
                 if(newSlot > -1 && newSlot == __instance.entityPlayerLocal.inventory.GetFocusedItemIdx())
                 {
-                    hidingItem = !hidingItem;
-                    int idx = GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx;
-                    if (hidingItem)
-                    {
-                        holdingModelIndex = idx;
-                        holdingModel = GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx];
-                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = null;
-                    }
-                    else
-                    {
-                        GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = holdingModel;
-                    }
-                    GameManager.Instance.World.GetPrimaryPlayer().inventory.updateHoldingItem();
+                    ToggleItem();
                     //GameManager.Instance.World.GetPrimaryPlayer().inventory.setHeldItemByIndex(idx, false);
                     //startedHidingItem = false;
 
                 }
 
+            }
+
+            private static void ToggleItem()
+            {
+                hidingItem = !hidingItem;
+                int idx = GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx;
+                if (hidingItem)
+                {
+                    holdingModelIndex = idx;
+                    holdingModel = GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx];
+                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = null;
+                }
+                else
+                {
+                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = holdingModel;
+                }
+                GameManager.Instance.World.GetPrimaryPlayer().inventory.updateHoldingItem();
             }
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemItemValue))]
@@ -104,6 +116,13 @@ namespace ToggleHoldingItem
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
                 __result = __instance.bareHandItem;
+                for (int i = 0; i < __result.Actions.Length; i++)
+                {
+                    if (__result.Actions[i] is ItemActionDynamicMelee)
+                    {
+                        (__result.Actions[i] as ItemActionDynamicMelee).RangeDefault = 2;
+                    }
+                }
                 return false;
             }
         }
@@ -117,6 +136,13 @@ namespace ToggleHoldingItem
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
                 __result = __instance.bareHandItemInventoryData;
+                for (int i = 0; i < __result.item.Actions.Length; i++)
+                {
+                    if (__result.item.Actions[i] is ItemActionDynamicMelee)
+                    {
+                        (__result.item.Actions[i] as ItemActionDynamicMelee).RangeDefault = 2;
+                    }
+                }
                 return false;
             }
         }
