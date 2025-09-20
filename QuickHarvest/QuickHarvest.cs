@@ -87,9 +87,9 @@ namespace QuickHarvest
                         Chunk chunk = (Chunk)player.world.GetChunkFromWorldPos(newPos);
                         int lcs = GameStats.GetInt(EnumGameStats.LandClaimSize);
                         int num = (lcs - 1) / 2;
-                        if (player.world.IsLandProtectedBlock(chunk, newPos, player.persistentPlayerData, num, num, false))
-                            continue;
                         if (!IsHarvestableBlock(bv.Block.blockName.ToLower()))
+                            continue;
+                        if (player.world.IsLandProtectedBlock(chunk, newPos, player.persistentPlayerData, num, num, false))
                             continue;
                         try
                         {

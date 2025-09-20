@@ -1,12 +1,8 @@
 ﻿using HarmonyLib;
 using InControl;
 using Newtonsoft.Json;
-using Platform;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Xml.Linq;
 using UnityEngine;
 using Path = System.IO.Path;
 
@@ -19,7 +15,6 @@ namespace ToggleHoldingItem
         public static ToggleHoldingItem context;
         public static Mod mod;
         public static bool hidingItem;
-        //public static bool startedHidingItem;
         private static Transform holdingModel;
         private static int holdingModelIndex;
         public void InitMod(Mod modInstance)
@@ -43,7 +38,6 @@ namespace ToggleHoldingItem
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.toggleKey))
                 {
-                    Dbgl("action triggered");
                     ToggleItem();
                     return;
                 }
@@ -69,8 +63,6 @@ namespace ToggleHoldingItem
                 if(newSlot > -1 && newSlot == __instance.entityPlayerLocal.inventory.GetFocusedItemIdx())
                 {
                     ToggleItem();
-                    //GameManager.Instance.World.GetPrimaryPlayer().inventory.setHeldItemByIndex(idx, false);
-                    //startedHidingItem = false;
 
                 }
 
