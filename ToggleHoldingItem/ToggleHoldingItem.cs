@@ -6,7 +6,7 @@ using System.Reflection;
 using UnityEngine;
 using Path = System.IO.Path;
 
-namespace ToggleHoldingItem
+namespace AdvancedCompassMarkers
 {
     public class ToggleHoldingItem : IModApi
     {
@@ -34,7 +34,7 @@ namespace ToggleHoldingItem
 
             static void Prefix(PlayerMoveController __instance)
             {
-                if (!config.modEnabled || __instance.entityPlayerLocal.AttachedToEntity != null)
+                if (!config.modEnabled || __instance.entityPlayerLocal.AttachedToEntity != null || GameManager.Instance.isAnyCursorWindowOpen(null))
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.toggleKey))
                 {
@@ -160,6 +160,18 @@ namespace ToggleHoldingItem
                     GameManager.Instance.World.GetPrimaryPlayer().inventory.models[holdingModelIndex] = holdingModel;
                     holdingModel = null;
                     hidingItem = false;
+                }
+            }
+        }
+        [HarmonyPatch(typeof(ItemActionEat), nameof(ItemActionEat.ExecuteAction))]
+        public static class ItemActionEat_ExecuteAction_Patch
+        {
+
+            public static void Prefix(ItemActionEat __instance, ItemActionData _actionData)
+            {
+                if(_actionData.invData.holdingEntity is EntityPlayerLocal && hidingItem)
+                {
+                    __instance.Consume = false;
                 }
             }
         }

@@ -1,5 +1,5 @@
 ﻿
-namespace ToggleHoldingItem
+namespace AdvancedCompassMarkers
 {
     public class ModConfig
     {

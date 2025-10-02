@@ -83,13 +83,13 @@ namespace SpawnTrader
             }
         }
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
+            public static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
             {
                 var entityPlayerLocal = ___m_World?.GetPrimaryPlayer();
-                if (!config.modEnabled || entityPlayerLocal == null || entityPlayerLocal.PlayerUI.windowManager.IsModalWindowOpen())
+                if (!config.modEnabled || entityPlayerLocal == null || GameManager.Instance.isAnyCursorWindowOpen(null))
                     return;
 
                 if (AedenthornUtils.CheckKeyDown(config.spawnTraderKey))

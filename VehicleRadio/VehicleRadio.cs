@@ -79,9 +79,9 @@ namespace VehicleRadio
         {
 
             static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
-            {
+            {   
                 var entityPlayerLocal = ___m_World?.GetPrimaryPlayer();
-                if (!config.modEnabled || entityPlayerLocal == null || entityPlayerLocal.PlayerUI.windowManager.IsModalWindowOpen() || entityPlayerLocal.AttachedToEntity == null || !vehicleTypes.Contains(entityPlayerLocal.AttachedToEntity.GetType()))
+                if (!config.modEnabled || entityPlayerLocal == null || GameManager.Instance.isAnyCursorWindowOpen(null) || entityPlayerLocal.AttachedToEntity == null || !vehicleTypes.Contains(entityPlayerLocal.AttachedToEntity.GetType()))
                     return;
                 if (stations.Count == 0)
                     return;

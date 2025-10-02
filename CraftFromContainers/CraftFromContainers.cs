@@ -68,7 +68,27 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
                     {
                         Dbgl("Adding method to add items from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacks2))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacksList))));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        [HarmonyPatch(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.CanSwapItems))]
+        static class XUiM_PlayerInventory_CanSwapItems_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling XUiM_PlayerInventory.CanSwapItems");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Call && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
+                    {
+                        Dbgl("Adding method to add items from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacksList))));
                         break;
                     }
                 }
@@ -117,7 +137,7 @@ namespace CraftFromContainers
                         var ciNew = new CodeInstruction(OpCodes.Ldarg_1);
                         ci.MoveLabelsTo(ciNew);
                         Dbgl("Adding method to remove from storages");
-                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForCraft))));
+                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForRemoveItems))));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_1));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_0));
                         codes.Insert(i + 3, ciNew);
@@ -141,7 +161,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
                     {
                         Dbgl("Adding method to add items from all storages");
-                        codes.Insert(i + 2, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacks))));
+                        codes.Insert(i + 2, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacksArray))));
                         break;
                     }
                 }
@@ -150,6 +170,25 @@ namespace CraftFromContainers
             }
         }
         
+        [HarmonyPatch(typeof(ItemActionEntryPurchase), nameof(ItemActionEntryPurchase.RefreshEnabled))]
+        static class ItemActionEntryPurchase_RefreshEnabled_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling ItemActionEntryPurchase.RefreshEnabled");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
+                    {
+                        Dbgl("Adding method to add item counts from all storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountCurrencyItem))));
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
         [HarmonyPatch(typeof(XUiC_IngredientEntry), nameof(XUiC_IngredientEntry.GetBindingValueInternal))]
         static class XUiC_IngredientEntry_GetBindingValueInternal_Patch
         {
@@ -162,7 +201,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
                     {
                         Dbgl("Adding method to add item counts from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountEntry))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountIngEntry))));
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_0));
                     }
                 }
@@ -339,13 +378,18 @@ namespace CraftFromContainers
             }
         }
         
-        private static int AddAllStoragesCountEntry(int count, XUiC_IngredientEntry entry)
+        private static int AddAllStoragesCountIngEntry(int count, XUiC_IngredientEntry entry)
         {
             return AddAllStoragesCountItem(count, entry.Ingredient.itemValue);
         }
         private static int AddAllStoragesCountItemStack(int count, ItemStack itemStack)
         {
             return AddAllStoragesCountItem(count, itemStack.itemValue);
+        }
+        private static int AddAllStoragesCountCurrencyItem(int count)
+        {
+            ItemValue item = ItemClass.GetItem(TraderInfo.CurrencyItem, false);
+            return AddAllStoragesCountItem(count, item);
         }
         private static int AddAllStoragesCountItem(int count, ItemValue item)
         {
@@ -388,7 +432,7 @@ namespace CraftFromContainers
             return count;
         }
         
-        private static ItemStack[] GetAllStorageStacks(ItemStack[] items)
+        private static ItemStack[] GetAllStorageStacksArray(ItemStack[] items)
         {
             ReloadStorages();
 
@@ -404,7 +448,7 @@ namespace CraftFromContainers
             }
             return itemList.ToArray();
         }
-        private static List<ItemStack> GetAllStorageStacks2(List<ItemStack> items)
+        private static List<ItemStack> GetAllStorageStacksList(List<ItemStack> items)
         {
             ReloadStorages();
 
@@ -450,7 +494,7 @@ namespace CraftFromContainers
             return numLeft;
         }
         
-        private static void RemoveRemainingForCraft(IList<ItemStack> _itemStacks, int i, int numLeft)
+        private static void RemoveRemainingForRemoveItems(IList<ItemStack> _itemStacks, int i, int numLeft)
         {
             ReloadStorages();
 

@@ -98,6 +98,10 @@ namespace AdvancedCruiseControl
                     currentCruiseSpeedPercent = 1;
                     return;
                 }
+                if(GameManager.Instance.isAnyCursorWindowOpen(null))
+                {
+                    return;
+                }
                 if (AedenthornUtils.CheckKeyDown(config.toggleKey))
                 {
                     Dbgl($"cruise  toggled");

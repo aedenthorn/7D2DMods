@@ -98,7 +98,7 @@ namespace UnrestrictedTraderAccess
                 if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null)
                     return;
 
-                if (AedenthornUtils.CheckKeyDown(config.toggleKey) && !___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsModalWindowOpen())
+                if (AedenthornUtils.CheckKeyDown(config.toggleKey) && !GameManager.Instance.isAnyCursorWindowOpen(null))
                 {
                     Dbgl($"Pressed toggle key");
                     LoadConfig();

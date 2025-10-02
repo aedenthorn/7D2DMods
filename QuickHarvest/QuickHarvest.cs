@@ -53,8 +53,9 @@ namespace QuickHarvest
 
             public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
             {
-                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || LocalPlayerUI.AnyModalWindowOpen() || !___windowManager.IsKeyShortcutsAllowed())
+                if (!config.modEnabled || ___m_World == null || ___m_World.GetPrimaryPlayer() == null || GameManager.Instance.isAnyCursorWindowOpen())
                     return;
+
                 if (AedenthornUtils.CheckKeyDown(config.harvestKey) && AedenthornUtils.CheckKeyHeld(config.harvestModKey, false))
                 {
                     Dbgl($"Pressed harvest key");

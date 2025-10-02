@@ -185,7 +185,7 @@ namespace PickupBlocks
 
             public static void Postfix(World ___m_World)
             {
-                if (___m_World is null || ___m_World.GetPrimaryPlayer() is null || ___m_World.GetPrimaryPlayer().windowManager.IsModalWindowOpen())
+                if (___m_World is null || ___m_World.GetPrimaryPlayer() is null || GameManager.Instance.isAnyCursorWindowOpen(null))
                     return;
                 if (AedenthornUtils.CheckKeyDown(config.ToggleModKey))
                 {
