@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using UnityEngine;
+using static AIDirectorPlayerInventory;
 
 namespace CraftFromContainers
 {
@@ -380,19 +381,32 @@ namespace CraftFromContainers
         
         private static int AddAllStoragesCountIngEntry(int count, XUiC_IngredientEntry entry)
         {
+            if (!config.modEnabled)
+                return count;
+
             return AddAllStoragesCountItem(count, entry.Ingredient.itemValue);
         }
         private static int AddAllStoragesCountItemStack(int count, ItemStack itemStack)
         {
+            if (!config.modEnabled)
+                return count;
+
             return AddAllStoragesCountItem(count, itemStack.itemValue);
         }
         private static int AddAllStoragesCountCurrencyItem(int count)
         {
+            if (!config.modEnabled || !config.enableForTrader)
+                return count;
+
             ItemValue item = ItemClass.GetItem(TraderInfo.CurrencyItem, false);
             return AddAllStoragesCountItem(count, item);
         }
         private static int AddAllStoragesCountItem(int count, ItemValue item)
         {
+            if (!config.modEnabled)
+                return count;
+
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -412,6 +426,9 @@ namespace CraftFromContainers
         }
         private static int AddAllStoragesCountItem2(int count, ItemClass itemClass)
         {
+            if (!config.modEnabled)
+                return count;
+
             ReloadStorages();
 
             var item = new ItemValue(itemClass.Id, false);
@@ -434,6 +451,9 @@ namespace CraftFromContainers
         
         private static ItemStack[] GetAllStorageStacksArray(ItemStack[] items)
         {
+            if (!config.modEnabled)
+                return items;
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -450,6 +470,9 @@ namespace CraftFromContainers
         }
         private static List<ItemStack> GetAllStorageStacksList(List<ItemStack> items)
         {
+            if (!config.modEnabled)
+                return items;
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -466,6 +489,9 @@ namespace CraftFromContainers
         }
         private static void AddAllStorageStacks(List<ItemStack> items)
         {
+            if (!config.modEnabled)
+                return;
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -479,6 +505,9 @@ namespace CraftFromContainers
 
         private static int GetTrueRemaining(IList<ItemStack> _itemStacks, int i, int numLeft)
         {
+            if (!config.modEnabled)
+                return numLeft;
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -618,6 +647,9 @@ namespace CraftFromContainers
         }
         private static void RemoveRemainingForRepair2(List<ItemStack> _itemStacks, int i, int numLeft)
         {
+            if (!config.modEnabled)
+                return;
+
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)

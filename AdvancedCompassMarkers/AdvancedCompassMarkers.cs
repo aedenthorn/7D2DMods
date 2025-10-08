@@ -38,16 +38,35 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled)
                     return;
-                var minScale = config.defaultMin;
-                var maxScale = config.defaultMax;
-                var distance = Mathf.Clamp(_distance, config.minDistance, config.maxDistance);
-                var closeness = config.maxDistance - distance; 
-                float scale = minScale + closeness / (config.maxDistance - config.minDistance) * (maxScale - minScale);
+                NavObjectCompassSettings currentCompassSettings = __instance.CurrentCompassSettings;
+                string text = __instance.GetSpriteName(currentCompassSettings);
+                bool changed = false;
+                if(!config.customMinMax.TryGetValue(text, out var settings))
+                {
+                    config.customMinMax[text] = null;
+                    SaveConfig();
+                }
+                if (settings == null)
+                {
+                    settings = new MinMaxSettings();
+                }
+                if (settings.minDistance < 0)
+                    settings.minDistance = config.defaultMinDistance;
+                if (settings.maxDistance < 0)
+                    settings.maxDistance = config.defaultMaxDistance;
+                if (settings.minScale < 0)
+                    settings.minScale = config.defaultMinScale;
+                if (settings.maxScale < 0)
+                    settings.maxScale = config.defaultMaxScale;
+
+                var distance = Mathf.Clamp(_distance, settings.minDistance, settings.maxDistance);
+                var closeness = settings.maxDistance - distance; 
+                float scale = settings.minScale + closeness / (settings.maxDistance - settings.minDistance) * (settings.maxScale - settings.minScale);
                 __result *= scale;
             }
         }
 
-        public void LoadConfig()
+        public static void LoadConfig()
         {
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
             if (!File.Exists(path))
@@ -58,22 +77,12 @@ namespace AdvancedCompassMarkers
             {
                 config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
             }
-            if(config.customMin == null)
-            {
-                config.customMin = new Dictionary<string, float>();
-                foreach(var e in Enum.GetNames(typeof(EnumMapObjectType)))
-                {
-                    config.customMin[e] = 0;
-                }
-            }
-            if(config.customMax == null)
-            {
-                config.customMax = new Dictionary<string, float>();
-                foreach(var e in Enum.GetNames(typeof(EnumMapObjectType)))
-                {
-                    config.customMax[e] = 0;
-                }
-            }
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
+
+        public static void SaveConfig()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
             File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
         }
 

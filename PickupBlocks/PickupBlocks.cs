@@ -14,6 +14,7 @@ namespace PickupBlocks
         private static PickupBlocks context;
         private static Mod mod;
         public static ModConfig config;
+
         public void InitMod(Mod modInstance)
         {
             config = new ModConfig();
@@ -28,7 +29,7 @@ namespace PickupBlocks
             foreach (Type t in addCommandTypes)
             {
                 var mi = t.GetMethod("GetBlockActivationCommands");
-                if(mi.DeclaringType == t)
+                if (mi.DeclaringType == t)
                 {
                     Dbgl($"Patching {t.Name}.GetBlockActivationCommands");
                     harmony.Patch(
@@ -39,7 +40,7 @@ namespace PickupBlocks
                     mi = t.GetMethod("OnBlockActivated", new Type[] { typeof(string), typeof(WorldBase), typeof(int), typeof(Vector3i), typeof(BlockValue), typeof(EntityPlayerLocal) });
                     if (mi.DeclaringType == t)
                     {
-                        foreach(var p in mi.GetParameters())
+                        foreach (var p in mi.GetParameters())
                         {
                             if (p.Name == "_cIdx")
                             {
@@ -85,17 +86,27 @@ namespace PickupBlocks
             }
             harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
+        private static bool CanPickupBlock(BlockActivationCommand[] result)
+        {
+            return config.EnableMod && config.EnablePickup && (!config.EnableMenuRestrict || (result != null && result.Where(c => c.enabled && c.text != "take").Count() > 0));
+        }
+        private static bool CanPickupBlock(WorldBase _world, Vector3i _blockPos)
+        {
+            return config.EnableMod && config.EnablePickup && (!config.EnableLandClaimRestrict || _world.IsMyLandProtectedBlock(_blockPos, _world.GetGameManager().GetPersistentLocalPlayer(), false));
+        }
         public static void GetBlockActivationCommands(WorldBase _world, Vector3i _blockPos, ref BlockActivationCommand[] __result)
         {
-            if (!config.modEnabled || _world.IsEditor())
+            if (!config.EnableMod || _world.IsEditor())
                 return;
             List<BlockActivationCommand> temp = new List<BlockActivationCommand>(__result);
             AddTakeCommand(_world, _blockPos, temp);
             __result = temp.ToArray();
         }
+
+
         public static bool OnBlockActivatedOne(Block __instance, string _commandName, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            if (!config.modEnabled || _blockValue.ischild || _commandName != "take")
+            if (!config.EnableMod || _blockValue.ischild || _commandName != "take" || !CanPickupBlock(_world, _blockPos) || !CanPickupBlock(_blockValue.Block.cmds))
                 return true;
             TakeBlock(_world, _cIdx, _blockPos, _blockValue, _player);
             return false;
@@ -103,30 +114,30 @@ namespace PickupBlocks
         
         public static bool OnBlockActivatedTwo(Block __instance, string _commandName, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
-            if (!config.modEnabled || _blockValue.ischild || _commandName != "take")
+            if (!config.EnableMod || _blockValue.ischild || _commandName != "take" || !CanPickupBlock(_world, _blockPos) || !CanPickupBlock(_blockValue.Block.cmds))
                 return true;
             TakeBlock(_world, _clrIdx, _blockPos, _blockValue, _player);
             return false;
         }
         private static void TempCanPickup_Prefix(Block __instance, ref bool __state, WorldBase _world, Vector3i _blockPos)
         {
-            if (!config.modEnabled)
+            if (!config.EnableMod)
                 return;
             __state = __instance.CanPickup;
             if (!__state)
-                __instance.CanPickup = CheckCanPickup(_world, _blockPos);
+                __instance.CanPickup = CanPickupBlock(_world, _blockPos) && CanPickupBlock(__instance.cmds);
 
         }
         private static void TempCanPickup_Postfix(Block __instance, bool __state)
         {
-            if (!config.modEnabled)
+            if (!config.EnableMod)
                 return;
             __instance.CanPickup = __state;
         }
 
         private static void AddTakeCommand(WorldBase _world, Vector3i _blockPos, List<BlockActivationCommand> temp)
         {
-            bool enabled = CheckCanPickup(_world, _blockPos);
+            bool enabled = CanPickupBlock(_world, _blockPos) && CanPickupBlock(temp.ToArray());
             for (int i = 0; i < temp.Count; i++)
             {
                 if (temp[i].text == "take")
@@ -136,23 +147,32 @@ namespace PickupBlocks
                     return;
                 }
             }
-            var bac = new BlockActivationCommand("take", "hand", enabled, false);
-            temp.Add(bac);
-        }
-        private static bool CheckCanPickup(WorldBase _world, Vector3i _blockPos)
-        {
-            if (config.RestrictBlocksToLandClaimArea && !_world.IsMyLandProtectedBlock(_blockPos, _world.GetGameManager().GetPersistentLocalPlayer(), false))
-                return false;
-            return true;
+            temp.Add(new BlockActivationCommand("take", "hand", enabled, false));
         }
         private static void TakeBlock(WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
             Block block = _blockValue.Block;
-            TileEntityLootContainer tileEntityLootContainer = _world.GetTileEntity(_clrIdx, _blockPos) as TileEntityLootContainer;
-            if (tileEntityLootContainer != null && (!tileEntityLootContainer.IsEmpty() || !tileEntityLootContainer.bTouched))
+            var entity = _world.GetTileEntity(_clrIdx, _blockPos);
+            if (entity?.GetType().Equals(typeof(TileEntityLootContainer)) == true)
             {
-                GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
-                return;
+                var telc = entity as TileEntityLootContainer;
+                 if (telc != null && !telc.IsEmpty() || !telc.bTouched)
+                {
+                    Dbgl($"{block.blockName} is telc, blocked because empty: {telc.IsEmpty()}, touched {telc.bTouched}");
+                    GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
+                    return;
+                }
+            }
+            if(entity is TileEntityComposite tec)
+            {
+                Dbgl($"is tec");
+                var lootable = tec.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                if(lootable != null && (!lootable.bTouched || !lootable.IsEmpty()))
+                {
+                    Dbgl($"storage blocked because empty: {lootable.IsEmpty()}, touched: {lootable.bTouched}");
+                    GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
+                    return;
+                }
             }
             if (!_world.CanPickupBlockAt(_blockPos, _world.GetGameManager().GetPersistentLocalPlayer()))
             {
@@ -170,7 +190,6 @@ namespace PickupBlocks
                 GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("xuiInventoryFullForPickup"), string.Empty, "ui_denied", null);
                 return;
             }
-            Dbgl($"Can pickup? {block.CanPickup}");
 
             //block.CanPickup = true;
             block.PickedUpItemValue = block.Properties.Params1[Block.PropCanPickup];
@@ -187,33 +206,23 @@ namespace PickupBlocks
             {
                 if (___m_World is null || ___m_World.GetPrimaryPlayer() is null || GameManager.Instance.isAnyCursorWindowOpen(null))
                     return;
-                if (AedenthornUtils.CheckKeyDown(config.ToggleModKey))
+                if (AedenthornUtils.CheckKeyDown(config.ToggleKey))
                 {
                     Dbgl($"Pressed mod toggle key");
-                    if (!config.modEnabled)
+                    if (AedenthornUtils.CheckKeyHeld(config.ToggleLandRestrictModKey))
                     {
-                        config.modEnabled = true;
-                        config.RestrictBlocksToLandClaimArea = true;
-                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionEnabledText, true);
+                        config.EnableLandClaimRestrict = !config.EnableLandClaimRestrict;
+                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.EnableLandClaimRestrict ? config.LandEnabledText : config.LandDisabledText, true);
                     }
-                    else if (config.AllowToggleLandClaimRestriction)
+                    else if (AedenthornUtils.CheckKeyHeld(config.ToggleMenuModKey))
                     {
-                        if (config.RestrictBlocksToLandClaimArea)
-                        {
-                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.RestrictionDisabledText, true);
-                            config.RestrictBlocksToLandClaimArea = false;
-                        }
-                        else
-                        {
-                            GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.DisabledText, true);
-                            config.RestrictBlocksToLandClaimArea = true;
-                            config.modEnabled = false;
-                        }
+                        config.EnableMenuRestrict = !config.EnableMenuRestrict;
+                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.EnableMenuRestrict ? config.MenuEnabledText: config.MenuDisabledText, true);
                     }
                     else 
                     {
-                        config.modEnabled = false;
-                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.DisabledText, true);
+                        config.EnablePickup = !config.EnablePickup;
+                        GameManager.ShowTooltip(___m_World.GetPrimaryPlayer(), config.EnablePickup ? config.EnabledText : config.DisabledText, true);
                     }
                     SaveConfig();
                 }
