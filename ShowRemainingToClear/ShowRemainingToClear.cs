@@ -56,22 +56,47 @@ namespace ShowRemainingToClear
                 //var spawnPointList = AccessTools.Field(typeof(SleeperVolume), "spawnPointList");
 
                 int left = 0;
+                int zombiesMin = 0;
+                int zombiesMax = 0;
                 foreach (var sed in QuestEventManager.Current.SleeperVolumeUpdateDictionary.Values)
                 {
                     if (sed.EntityList.Exists(e => GameManager.Instance.World.GetEntity(e) is EntityPlayerLocal))
                     {
                         left = sed.SleeperVolumes.Count();
+                        foreach (var sv in sed.SleeperVolumes)
+                        {
+                            float num = 1f;
+                            if (sv.prefabInstance != null)
+                            {
+                                num = ((sv.prefabInstance.LastQuestClass == null) ? 1f : sv.prefabInstance.LastQuestClass.SpawnMultiplier);
+                                byte difficultyTier = sv.prefabInstance.prefab.DifficultyTier;
+                                num *= (((int)difficultyTier < SleeperVolume.difficultyTierScale.Length) ? SleeperVolume.difficultyTierScale[(int)difficultyTier] : SleeperVolume.difficultyTierScale[SleeperVolume.difficultyTierScale.Length - 1]);
+                                if (sv.prefabInstance.LastRefreshType.Test_AnySet(QuestEventManager.banditTag))
+                                {
+                                    num = 0.2f;
+                                }
+                            }
+                            zombiesMin += (int)(sv.spawnCountMin * num);
+                            zombiesMax += (int)(sv.spawnCountMax * num);
+                        }
                         break;
                     }
                 }
                 if (left <= 0)
                     return true;
-
-                value = string.Format(config.remainingText, __instance.QuestObjective.Description, left);
+                if (config.showZombieCount)
+                {
+                    value = string.Format(config.remainingTextWithZombies, __instance.QuestObjective.Description, left, zombiesMin, zombiesMax);
+                }
+                else
+                {
+                    value = string.Format(config.remainingText, __instance.QuestObjective.Description, left);
+                }
                 return false;
             }
         }
-        //[HarmonyPatch(typeof(SleeperEventData), nameof(SleeperEventData.Update))]
+        /*
+        [HarmonyPatch(typeof(SleeperEventData), nameof(SleeperEventData.Update))]
         public static class SleeperEventData_Update_Patch
         {
             public static void Postfix(SleeperEventData __instance)
@@ -95,6 +120,6 @@ namespace ShowRemainingToClear
                 }
             }
         }
-
+        */
     }
 }

@@ -7,10 +7,11 @@ namespace AdvancedCompassMarkers
     {
         public bool modEnabled = true;
         public bool isDebug = true;
+        public string reloadKey = "end";
         public float defaultMinScale = 0.25f;
         public float defaultMaxScale = 1.5f;
         public float defaultMinDistance = 0f;
-        public float defaultMaxDistance = 500;
+        public float defaultMaxDistance = 250;
         public Dictionary<string, MinMaxSettings> customMinMax = new Dictionary<string, MinMaxSettings>();
     }
 

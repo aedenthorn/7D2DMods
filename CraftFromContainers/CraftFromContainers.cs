@@ -138,7 +138,7 @@ namespace CraftFromContainers
                         var ciNew = new CodeInstruction(OpCodes.Ldarg_1);
                         ci.MoveLabelsTo(ciNew);
                         Dbgl("Adding method to remove from storages");
-                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.RemoveRemainingForRemoveItems))));
+                        codes.Insert(i + 3, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForRemoveItems))));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_1));
                         codes.Insert(i + 3, new CodeInstruction(OpCodes.Ldloc_0));
                         codes.Insert(i + 3, ciNew);
@@ -147,6 +147,124 @@ namespace CraftFromContainers
                 }
 
                 return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(EntityVehicle), nameof(EntityVehicle.takeFuel))]
+        static class EntityVehicle_takeFuel_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling EntityVehicle.takeFuel");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
+                    {
+                        Dbgl("Adding method to remove from storages");
+                        codes[i].opcode = OpCodes.Call;
+                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemFortakeFuel));
+                        break;
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(AnimatorRangedReloadState), nameof(AnimatorRangedReloadState.GetAmmoCountToReload))]
+        static class AnimatorRangedReloadState_GetAmmoCountToReload_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling AnimatorRangedReloadState.GetAmmoCountToReload");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
+                    {
+                        Dbgl("Adding method to remove from storages");
+                        codes[i].opcode = OpCodes.Call;
+                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForGetAmmoCountToReload));
+                    }
+                    else if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                    {
+                        Dbgl("Adding method to get item count from storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_2));
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(Animator3PRangedReloadState), nameof(Animator3PRangedReloadState.GetAmmoCountToReload))]
+        static class Animator3PRangedReloadState_GetAmmoCountToReload_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling Animator3PRangedReloadState.GetAmmoCountToReload");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
+                    {
+                        Dbgl("Adding method to remove from storages");
+                        codes[i].opcode = OpCodes.Call;
+                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForGetAmmoCountToReload));
+                    }
+                    else if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                    {
+                        Dbgl("Adding method to get item count from storages");
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldarg_2));
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(ItemActionRanged), nameof(ItemActionRanged.CanReload))]
+        static class ItemActionRanged_CanReload_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling ItemActionRanged.CanReload");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount), new Type[] { typeof(ItemValue),typeof(int), typeof(int), typeof(bool)  }))
+                    {
+                        Dbgl("Adding method to get item count from storages");
+                        codes[i].opcode = OpCodes.Call;
+                        codes[i].operand  = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetItemCountForCanReload));
+                        
+                    }
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(EntityVehicle), nameof(EntityVehicle.hasGasCan))]
+        static class EntityVehicle_hasGasCan_Patch
+        {
+            public static void Postfix(EntityVehicle __instance, EntityAlive _ea, ref bool __result)
+            {
+                if (!config.modEnabled || __result || !config.enableForRefuel)
+                {
+                    return;
+                }
+                string fuelItem = __instance.GetVehicle().GetFuelItem();
+                if (fuelItem == "")
+                {
+                    return;
+                }
+                ItemValue item = ItemClass.GetItem(fuelItem, false);
+
+                __result = AddAllStoragesCountItemValue(0, item) > 0;
             }
         }
         
@@ -250,7 +368,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) } ))
                     {
                         Dbgl("Adding method to count items from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem2))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemClass))));
                         codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
                         break;
                     }
@@ -273,7 +391,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetItemCount), new Type[] { typeof(ItemValue) }))
                     {
                         Dbgl("Adding method to count items from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem2))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemClass))));
                         codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
                         break;
                     }
@@ -296,7 +414,7 @@ namespace CraftFromContainers
                     if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount), new Type[] { typeof(ItemValue), typeof(int), typeof(int), typeof(bool), }))
                     {
                         Dbgl("Adding method to count items from all storages");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItem))));
+                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
                         codes.Insert(i + 1, new CodeInstruction(codes[i - 4].opcode, codes[i - 4].operand));
                         break;
                     }
@@ -379,19 +497,28 @@ namespace CraftFromContainers
             }
         }
         
+        private static int GetItemCountForCanReload(Bag bag, ItemValue _itemValue, int _seed, int _meta, bool _ignoreModdedItems)
+        {
+            int count = bag.GetItemCount(_itemValue, _seed, _meta, _ignoreModdedItems);
+            if (!config.modEnabled || !config.enableForReload)
+                return count;
+
+            return count + AddAllStoragesCountItemValue(count, _itemValue);
+        }
+        
         private static int AddAllStoragesCountIngEntry(int count, XUiC_IngredientEntry entry)
         {
             if (!config.modEnabled)
                 return count;
 
-            return AddAllStoragesCountItem(count, entry.Ingredient.itemValue);
+            return AddAllStoragesCountItemValue(count, entry.Ingredient.itemValue);
         }
         private static int AddAllStoragesCountItemStack(int count, ItemStack itemStack)
         {
             if (!config.modEnabled)
                 return count;
 
-            return AddAllStoragesCountItem(count, itemStack.itemValue);
+            return AddAllStoragesCountItemValue(count, itemStack.itemValue);
         }
         private static int AddAllStoragesCountCurrencyItem(int count)
         {
@@ -399,9 +526,9 @@ namespace CraftFromContainers
                 return count;
 
             ItemValue item = ItemClass.GetItem(TraderInfo.CurrencyItem, false);
-            return AddAllStoragesCountItem(count, item);
+            return AddAllStoragesCountItemValue(count, item);
         }
-        private static int AddAllStoragesCountItem(int count, ItemValue item)
+        private static int AddAllStoragesCountItemValue(int count, ItemValue item)
         {
             if (!config.modEnabled)
                 return count;
@@ -424,7 +551,7 @@ namespace CraftFromContainers
             }
             return count;
         }
-        private static int AddAllStoragesCountItem2(int count, ItemClass itemClass)
+        private static int AddAllStoragesCountItemClass(int count, ItemClass itemClass)
         {
             if (!config.modEnabled)
                 return count;
@@ -523,8 +650,10 @@ namespace CraftFromContainers
             return numLeft;
         }
         
-        private static void RemoveRemainingForRemoveItems(IList<ItemStack> _itemStacks, int i, int numLeft)
+        private static void DecItemForRemoveItems(IList<ItemStack> _itemStacks, int i, int numLeft)
         {
+            if(!config.modEnabled) 
+                return;
             ReloadStorages();
 
             if (currentStorageDict.Count == 0)
@@ -553,6 +682,60 @@ namespace CraftFromContainers
             }
         }
         
+        private static int DecItemFortakeFuel(Bag bag, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
+        {
+            int num = bag.DecItem(item, count, modded, _removedItems);
+            if (num == count || !config.enableForRefuel || !config.modEnabled)
+                return num;
+            ReloadStorages();
+            if (currentStorageDict.Count == 0)
+                return num;
+            int numLeft = count - num;
+            Dbgl($"Trying to remove {numLeft} {item.ItemClass.GetItemName()} for vehicle fuel");
+            return DecItem(item, numLeft);
+        }
+
+
+        private static int DecItemForGetAmmoCountToReload(Inventory inv, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
+        {
+            int num = inv.DecItem(item, count, modded, _removedItems);
+            if (num == count || !config.enableForReload || !config.modEnabled)
+                return num;
+            ReloadStorages();
+            if (currentStorageDict.Count == 0)
+                return num;
+            int numLeft = count - num;
+            Dbgl($"Trying to remove {numLeft} {item.ItemClass.GetItemName()} for reload");
+            return DecItem(item, numLeft);
+        }
+
+        private static int DecItem(ItemValue item, int count)
+        {
+            int numLeft = count;
+            foreach (var kvp in currentStorageDict)
+            {
+                var items = kvp.Value.items;
+                for (int j = 0; j < items.Length; j++)
+                {
+                    if (items[j].itemValue.type == item.type)
+                    {
+                        int toRem = Math.Min(numLeft, items[j].count);
+                        Dbgl($"Removing {toRem}/{numLeft} {item.ItemClass.GetItemName()}");
+                        numLeft -= toRem;
+                        if (items[j].count <= toRem)
+                            items[j].Clear();
+                        else
+                            items[j].count -= toRem;
+
+                        kvp.Value.SetModified();
+                        if (numLeft <= 0)
+                            return count;
+                    }
+                }
+            }
+            return count - numLeft;
+        }
+
         private static int RemoveRemainingForUpgrade(int numRemoved, ItemActionRepair action, BlockValue blockValue)
         {
             if (!config.modEnabled)

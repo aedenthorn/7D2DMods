@@ -160,12 +160,19 @@ namespace QuickStorage
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
             var bag = player.bag;
+            if(bag is null)
+            {
+                Dbgl($"Player bag is null");
+                return;
+            }
             ItemStack[] slots = bag.GetSlots();
             for (int i = config.skipSlots; i < slots.Length; i++)
             {
                 if (slots[i].IsEmpty() || (bag.LockedSlots.Length > i && bag.LockedSlots[i]))
                     continue;
                 var initItem = slots[i].Clone();
+                if (initItem is null)
+                    continue;
                 var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
                 if (config.storeIgnore.Length > 0)
                 {

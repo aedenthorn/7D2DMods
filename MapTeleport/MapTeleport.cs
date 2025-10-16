@@ -43,11 +43,21 @@ namespace MapTeleport
         static class XUiC_MapArea_teleportPlayerOnMap_Patch
         {
 
-            static void Postfix()
+            static void Prefix(XUiC_MapArea __instance, Vector3 _screenPosition)
             {
                 if (!config.modEnabled)
                     return;
-                LocalPlayerUI.GetUIForPlayer(GameManager.Instance.World.GetPrimaryPlayer()).windowManager.CloseAllOpenWindows(null, false);
+                Vector3 playerDest = __instance.screenPosToWorldPos(_screenPosition, false);
+                
+                foreach (var d in DroneManager.Instance.dronesActive)
+                {
+                    if (d.belongsToPlayerId(__instance.localPlayer.entityId))
+                    {
+                        Vector3 vector = playerDest + (d.position - __instance.localPlayer.position);
+                        d.teleportToPosition(vector);
+                    }
+                }
+                LocalPlayerUI.GetUIForPlayer(__instance.xui.playerUI.entityPlayer).windowManager.CloseAllOpenWindows(null, false);
 
             }
         }

@@ -46,9 +46,9 @@ namespace KillNotification
         {
             static void Postfix(EntityAlive __instance, EntityAlive killer)
             {
-                if (!config.modEnabled)
+                if (!config.modEnabled || !(killer is EntityPlayer))
                     return;
-                var isKiller = killer == GameManager.Instance.World.GetPrimaryPlayer();
+                var isKiller = killer.entityId == GameManager.Instance.myPlayerId;
                 if (!config.notifyAllKills && !isKiller)
                     return;
                 if (config.chimeAllKills || isKiller)
@@ -121,7 +121,18 @@ namespace KillNotification
         }
         public static void AddIconNotification(string killed)
         {
-            var collectedItemList = GameManager.Instance.World.GetPrimaryPlayer().PlayerUI.xui.CollectedItemList;
+            EntityPlayerLocal player = null;
+            foreach (var p in GameManager.Instance.World.Players.list)
+            {
+                if (p.entityId == GameManager.Instance.myPlayerId)
+                {
+                    player = (EntityPlayerLocal)p;
+                    break;
+                }
+            }
+            if (player == null)
+                return;
+            var collectedItemList = LocalPlayerUI.GetUIForPlayer(player).xui.CollectedItemList;
             if (collectedItemList.items == null)
             {
                 return;

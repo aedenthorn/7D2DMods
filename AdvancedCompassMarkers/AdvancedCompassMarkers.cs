@@ -38,17 +38,14 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled)
                     return;
+                bool newSetting = false;
                 NavObjectCompassSettings currentCompassSettings = __instance.CurrentCompassSettings;
                 string text = __instance.GetSpriteName(currentCompassSettings);
-                bool changed = false;
                 if(!config.customMinMax.TryGetValue(text, out var settings))
                 {
-                    config.customMinMax[text] = null;
-                    SaveConfig();
-                }
-                if (settings == null)
-                {
                     settings = new MinMaxSettings();
+                    config.customMinMax[text] = settings;
+                    newSetting = true;
                 }
                 if (settings.minDistance < 0)
                     settings.minDistance = config.defaultMinDistance;
@@ -58,14 +55,33 @@ namespace AdvancedCompassMarkers
                     settings.minScale = config.defaultMinScale;
                 if (settings.maxScale < 0)
                     settings.maxScale = config.defaultMaxScale;
-
+                if (newSetting)
+                {
+                    SaveConfig();
+                }
                 var distance = Mathf.Clamp(_distance, settings.minDistance, settings.maxDistance);
                 var closeness = settings.maxDistance - distance; 
                 float scale = settings.minScale + closeness / (settings.maxDistance - settings.minDistance) * (settings.maxScale - settings.minScale);
-                __result *= scale;
+                __result = scale;
             }
         }
 
+        [HarmonyPatch(typeof(GameManager), "Update")]
+        public static class GameManager_Update_Patch
+        {
+
+            public static void Postfix(GameManager __instance, World ___m_World, GUIWindowManager ___windowManager)
+            {
+                if (!config.modEnabled || GameManager.Instance.isAnyCursorWindowOpen())
+                    return;
+
+                if (AedenthornUtils.CheckKeyDown(config.reloadKey))
+                {
+                    Dbgl($"Pressed reload key");
+                    LoadConfig();
+                }
+            }
+        }
         public static void LoadConfig()
         {
             var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
