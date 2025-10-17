@@ -53,7 +53,10 @@ namespace MapTeleport
                 {
                     if (d.belongsToPlayerId(__instance.localPlayer.entityId))
                     {
-                        Vector3 vector = playerDest + (d.position - __instance.localPlayer.position);
+                        Vector3 distance = (d.position - __instance.localPlayer.position);
+                        if (distance.magnitude > d.FollowDistance)
+                            continue;
+                        Vector3 vector = playerDest + distance;
                         d.teleportToPosition(vector);
                     }
                 }

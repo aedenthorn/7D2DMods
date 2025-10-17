@@ -187,6 +187,14 @@ namespace QuickStorage
                 }
                 foreach (var v in storageList)
                 {
+                    var tileEntity = GameManager.Instance.World.GetTileEntity(v);
+                    if(tileEntity != null)
+                    {
+                        EntityAlive entityAlive;
+                        if (GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[tileEntity])) != null && !entityAlive.IsDead())
+                            continue;
+                    }
+
                     if (Array.Exists(storageDict[v].items, s => s.itemValue.type == initItem.itemValue.type))
                     {
                         storageDict[v].TryStackItem(0, slots[i]);

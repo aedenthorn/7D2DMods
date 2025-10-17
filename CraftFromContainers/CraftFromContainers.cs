@@ -889,6 +889,9 @@ namespace CraftFromContainers
                                     var lockable = entity.GetFeature<ILockable>();
                                     if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                     {
+                                        EntityAlive entityAlive;
+                                        if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                            continue;
                                         knownStorageDict[loc] = lootable;
                                         if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
                                             currentStorageDict[loc] = lootable;
