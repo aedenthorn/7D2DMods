@@ -76,8 +76,24 @@ namespace ShowRemainingToClear
                                     num = 0.2f;
                                 }
                             }
-                            zombiesMin += (int)(sv.spawnCountMin * num);
-                            zombiesMax += (int)(sv.spawnCountMax * num);
+                            int min;
+                            int max;
+                            if(sv.spawnCountMin < 0 || sv.spawnCountMax < 0)
+                            {
+                                min = 5;
+                                max = 6;
+                            }
+                            else
+                            {
+                                min = (int)Math.Floor((double)sv.spawnCountMin);
+                                max = (int)Math.Ceiling((double)sv.spawnCountMax);
+                                if (min == 0)
+                                    min = 1;
+                                if (max == 0)
+                                    max = 1;
+                            }
+                            zombiesMin += min;
+                            zombiesMax += max;
                         }
                         break;
                     }
