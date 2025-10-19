@@ -137,16 +137,13 @@ namespace QuickStorage
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 {
-                                    EntityAlive entityAlive;
-                                    if (entity.IsUserAccessing() || GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[tileEntity])) != null && !entityAlive.IsDead())
-                                        continue;
-                                    storageList.Add(loc);
-                                    storageDict.Add(loc, lootable);
-
+                                    if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
+                                    {
+                                        storageList.Add(loc);
+                                        storageDict.Add(loc, lootable);
+                                    }
                                 }
-
                             }
-
                         }
                     }
                     c.ExitReadLock();
