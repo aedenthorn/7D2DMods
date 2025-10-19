@@ -38,30 +38,22 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled)
                     return;
-                bool newSetting = false;
                 NavObjectCompassSettings currentCompassSettings = __instance.CurrentCompassSettings;
                 string text = __instance.GetSpriteName(currentCompassSettings);
                 if(!config.customMinMax.TryGetValue(text, out var settings))
                 {
                     settings = new MinMaxSettings();
                     config.customMinMax[text] = settings;
-                    newSetting = true;
-                }
-                if (settings.minDistance < 0)
-                    settings.minDistance = config.defaultMinDistance;
-                if (settings.maxDistance < 0)
-                    settings.maxDistance = config.defaultMaxDistance;
-                if (settings.minScale < 0)
-                    settings.minScale = config.defaultMinScale;
-                if (settings.maxScale < 0)
-                    settings.maxScale = config.defaultMaxScale;
-                if (newSetting)
-                {
                     SaveConfig();
                 }
-                var distance = Mathf.Clamp(_distance, settings.minDistance, settings.maxDistance);
-                var closeness = settings.maxDistance - distance; 
-                float scale = settings.minScale + closeness / (settings.maxDistance - settings.minDistance) * (settings.maxScale - settings.minScale);
+                var minDistance = settings.minDistance >= 0 ? settings.minDistance : config.defaultMinDistance;
+                var maxDistance = settings.maxDistance >= 0 ? settings.maxDistance : config.defaultMaxDistance;
+                var minScale = settings.minScale >= 0 ? settings.minScale : config.defaultMinScale;
+                var maxScale = settings.maxScale >= 0 ? settings.maxScale : config.defaultMaxScale;
+                var distance = Mathf.Clamp(_distance, minDistance, maxDistance);
+                var closeness = maxDistance - distance; 
+
+                float scale = minScale + closeness / (maxDistance - minDistance) * (maxScale - minScale);
                 __result = scale;
             }
         }
