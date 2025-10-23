@@ -12,6 +12,7 @@ namespace CraftFromContainers
         public bool enableForTrader = true;
         public bool enableForRefuel = true;
         public bool enableForReload = true;
+        public bool enableFromVehicles = true;
         public float range = -1;
     }
 }

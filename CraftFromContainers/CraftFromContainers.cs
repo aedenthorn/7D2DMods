@@ -18,9 +18,11 @@ namespace CraftFromContainers
     {
         private static CraftFromContainers context;
         private static Mod mod;
-        private static Dictionary<Vector3i, TEFeatureStorage> knownStorageDict = new Dictionary<Vector3i, TEFeatureStorage>();
-        private static Dictionary<Vector3i, TEFeatureStorage> currentStorageDict = new Dictionary<Vector3i, TEFeatureStorage>();
+        private static Dictionary<Vector3i, ITileEntityLootable> knownStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
+        private static Dictionary<Vector3i, ITileEntityLootable> currentStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
         public static ModConfig config;
+        public static object vehicleList;
+
         public void InitMod(Mod modInstance)
         {
             LoadConfig();
@@ -875,6 +877,30 @@ namespace CraftFromContainers
                 foreach (var c in cc.chunks.dict.Values.ToArray())
                 {
                     c.EnterReadLock();
+                    if (config.enableFromVehicles)
+                    {
+                        foreach (var el in c.entityLists)
+                        {
+                            foreach (var entity in el)
+                            {
+                                if (entity is EntityVehicle)
+                                {
+                                    var ev = entity as EntityVehicle;
+                                    if (ev.LocalPlayerIsOwner() && ev.hasStorage())
+                                    {
+                                        var vpos = new Vector3i(ev.position);
+                                        Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
+                                        knownStorageDict[vpos] = ev.lootContainer;
+                                        if (config.range <= 0 || Vector3.Distance(pos, ev.position) < config.range)
+                                        {
+                                            Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
+                                            currentStorageDict[new Vector3i(ev.position)] = ev.lootContainer;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     foreach (var key in c.tileEntities.dict.Keys.ToArray())
                     {
                         if (c.tileEntities.dict.TryGetValue(key, out var val))

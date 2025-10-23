@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>$(ProjectName)</AssemblyName>
     <RootNamespace>$(ProjectName)</RootNamespace>
-    <TargetFramework>net480</TargetFramework>
+    <TargetFramework>net481</TargetFramework>
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
@@ -76,6 +76,11 @@
     <Reference Include="netstandard">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(ManagedDataPath)\netstandard.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="mscorlib">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ManagedDataPath)\mscorlib.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

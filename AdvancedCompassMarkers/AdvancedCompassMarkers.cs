@@ -16,9 +16,6 @@ namespace AdvancedCompassMarkers
         public static ModConfig config;
         public static AdvancedCompassMarkers context;
         public static Mod mod;
-        public static bool hidingItem;
-        private static Transform holdingModel;
-        private static int holdingModelIndex;
         public void InitMod(Mod modInstance)
         {
             context = this;

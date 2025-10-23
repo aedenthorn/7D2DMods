@@ -18,7 +18,8 @@ namespace QuickStorage
         public static QuickStorage context;
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
-        public static Dictionary<Vector3i, TEFeatureStorage> storageDict = new Dictionary<Vector3i, TEFeatureStorage>();
+        public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
+        public static Dictionary<Vector3i, ITileEntityLootable> storageDict = new Dictionary<Vector3i, ITileEntityLootable>();
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -49,6 +50,67 @@ namespace QuickStorage
             if(config.isDebug)
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
+
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TELockServer))]
+        public static class GameManager_TELockServer_Patch
+        {
+            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
+            {
+                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+                    return;
+
+                TileEntity tileEntity;
+                if (_lootEntityId == -1)
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
+                }
+                else
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
+                }
+                if (tileEntity == null)
+                {
+                    return;
+                }
+                if (__instance.lockedTileEntities.ContainsKey(tileEntity))
+                {
+                    Dbgl($"Sending locked message");
+
+                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, false), true, -1, -1, -1, null, 192, false);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
+        public static class GameManager_TEUnlockServer_Patch
+        {
+            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
+            {
+                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+                    return;
+
+                TileEntity tileEntity;
+                if (_lootEntityId == -1)
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
+                }
+                else
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
+                }
+                if (tileEntity == null)
+                {
+                    return;
+                }
+                if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
+                {
+                    Dbgl($"Sending unlocked message");
+
+                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
+                }
+            }
+        }
+
 
         [HarmonyPatch(typeof(GameManager), "Update")]
         public static class GameManager_Update_Patch
@@ -131,12 +193,18 @@ namespace QuickStorage
                         var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
-                            var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                            var lootable = entity.GetFeature<ITileEntityLootable>();
                             if (lootable != null && lootable.bPlayerStorage)
                             {
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 {
+                                    if (lockedList.Contains(loc))
+                                    {
+                                        Dbgl($"storage is locked!");
+                                        continue;
+                                    }
+
                                     if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
                                     {
                                         storageList.Add(loc);

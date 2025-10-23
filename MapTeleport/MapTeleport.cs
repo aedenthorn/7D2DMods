@@ -48,18 +48,39 @@ namespace MapTeleport
                 if (!config.modEnabled)
                     return;
                 Vector3 playerDest = __instance.screenPosToWorldPos(_screenPosition, false);
-                
-                foreach (var d in DroneManager.Instance.dronesActive)
+                if(DroneManager.Instance?.dronesActive != null)
                 {
-                    if (d.belongsToPlayerId(__instance.localPlayer.entityId))
+                    foreach (var d in DroneManager.Instance.dronesActive)
                     {
-                        Vector3 distance = (d.position - __instance.localPlayer.position);
-                        if (distance.magnitude > d.FollowDistance)
-                            continue;
-                        Vector3 vector = playerDest + distance;
-                        d.teleportToPosition(vector);
+                        try
+                        {
+                            if (d.belongsToPlayerId(__instance.localPlayer.entityId))
+                            {
+                                Vector3 posDiff = (d.position - __instance.localPlayer.position);
+                                if (posDiff.magnitude > d.FollowDistance)
+                                {
+                                    if (config.forceDroneToPlayer)
+                                    {
+                                        posDiff.Normalize();
+                                        posDiff *= d.FollowDistance * 0.75f;
+                                        if(posDiff.y < 0)
+                                        {
+                                            posDiff.y = 0;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
+                                Vector3 vector = playerDest + posDiff;
+                                d.teleportToPosition(vector);
+                            }
+                        }
+                        catch { }
                     }
                 }
+
                 LocalPlayerUI.GetUIForPlayer(__instance.xui.playerUI.entityPlayer).windowManager.CloseAllOpenWindows(null, false);
 
             }
