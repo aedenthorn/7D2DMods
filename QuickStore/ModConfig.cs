@@ -5,6 +5,7 @@ namespace QuickStorage
     {
         public bool modEnabled = true;
         public bool isDebug = true;
+        public bool storeToForge = true;
         public float range = -1;
         public int skipSlots = 0;
 

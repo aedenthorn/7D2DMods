@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using static AIDirectorPlayerInventory;
 using Path = System.IO.Path;
 
 namespace QuickStorage
@@ -19,7 +20,7 @@ namespace QuickStorage
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
         public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
-        public static Dictionary<Vector3i, ITileEntityLootable> storageDict = new Dictionary<Vector3i, ITileEntityLootable>();
+        public static Dictionary<Vector3i, object> storageDict = new Dictionary<Vector3i, object>();
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -212,6 +213,27 @@ namespace QuickStorage
                                     }
                                 }
                             }
+                            continue;
+                        }
+                        var entity2 = (tileEntity as TileEntityForge);
+                        if (entity2 != null)
+                        {
+                            var lockable = entity.GetFeature<ILockable>();
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                            {
+                                if (lockedList.Contains(loc))
+                                {
+                                    Dbgl($"storage is locked!");
+                                    continue;
+                                }
+
+                                if (!entity2.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
+                                {
+                                    storageList.Add(loc);
+                                    storageDict.Add(loc, entity2);
+                                }
+                            }
+                            continue;
                         }
                     }
                     c.ExitReadLock();
@@ -255,36 +277,66 @@ namespace QuickStorage
                 }
                 foreach (var v in storageList)
                 {
-
-
-                    if (Array.Exists(storageDict[v].items, s => s.itemValue.type == initItem.itemValue.type))
+                    if(storageDict[v] is ITileEntityLootable tel)
                     {
-                        storageDict[v].TryStackItem(0, slots[i]);
-                        if (slots[i].count > 0)
+
+                        if (Array.Exists(tel.items, s => s.itemValue.type == initItem.itemValue.type))
                         {
-                            if (storageDict[v].AddItem(slots[i]))
-                                slots[i].count = 0;
-                        }
-                        int moved = initItem.count - slots[i].count;
-                        if(moved > 0)
-                        {
-                            bag.onBackpackChanged();
-                            storageDict[v].SetModified();
-                            if (dict.ContainsKey(initItem.itemValue.type))
+                            tel.TryStackItem(0, slots[i]);
+                            if (slots[i].count > 0)
                             {
-                                dict[initItem.itemValue.type] += moved;
+                                if (tel.AddItem(slots[i]))
+                                    slots[i].count = 0;
                             }
-                            else
+                            int moved = initItem.count - slots[i].count;
+                            if (moved > 0)
                             {
-                                dict[initItem.itemValue.type] = moved;
+                                bag.onBackpackChanged();
+                                tel.SetModified();
+                                if (dict.ContainsKey(initItem.itemValue.type))
+                                {
+                                    dict[initItem.itemValue.type] += moved;
+                                }
+                                else
+                                {
+                                    dict[initItem.itemValue.type] = moved;
+                                }
                             }
-                        }
-                        if (slots[i].count == 0)
-                        {
-                            slots[i].Clear();
-                            break;
+                            if (slots[i].count == 0)
+                            {
+                                slots[i].Clear();
+                                break;
+                            }
                         }
                     }
+                    else if (storageDict[v] is TileEntityForge tef)
+                    {
+                        if (Array.Exists(tef.input, s => s.itemValue.type == initItem.itemValue.type))
+                        {
+                            int moved = TryStackItem(tef.input, 0, slots[i]);
+                            if (moved > 0)
+                            {
+                                bag.onBackpackChanged();
+                                tef.SetModified();
+                                if (dict.ContainsKey(initItem.itemValue.type))
+                                {
+                                    dict[initItem.itemValue.type] += moved;
+                                }
+                                else
+                                {
+                                    dict[initItem.itemValue.type] = moved;
+                                }
+                            }
+                            if (slots[i].count == 0)
+                            {
+                                slots[i].Clear();
+                                break;
+                            }
+                        }
+
+                    }
+
+
                 }
             next:
                 continue;
@@ -302,6 +354,29 @@ namespace QuickStorage
 
             Dbgl($"Stored {dict.Count} items");
         }
+
+        public static int TryStackItem(ItemStack[] items, int startIndex, ItemStack _itemStack)
+        {
+            int count = _itemStack.count;
+            int num = 0;
+            int total = 0;
+            for (int i = startIndex; i < items.Length; i++)
+            {
+                num = _itemStack.count;
+                if (_itemStack.itemValue.type == items[i].itemValue.type && items[i].CanStackPartly(ref num))
+                {
+                    items[i].count += num;
+                    _itemStack.count -= num;
+                    total += num;
+                    if (_itemStack.count == 0)
+                    {
+                        return total;
+                    }
+                }
+            }
+            return total;
+        }
+
         public static void PullItems(World world)
         {
             Dbgl($"Pulling items");
@@ -327,19 +402,26 @@ namespace QuickStorage
                         var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
-                            var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                            var lootable = entity.GetFeature<ITileEntityLootable>();
                             if (lootable != null && lootable.bPlayerStorage)
                             {
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 {
-                                    storageList.Add(loc);
-                                    storageDict.Add(loc, lootable);
+                                    if (lockedList.Contains(loc))
+                                    {
+                                        Dbgl($"storage is locked!");
+                                        continue;
+                                    }
 
+                                    if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
+                                    {
+                                        storageList.Add(loc);
+                                        storageDict.Add(loc, lootable);
+                                    }
                                 }
-
                             }
-
+                            continue;
                         }
                     }
                     c.ExitReadLock();
@@ -387,39 +469,44 @@ namespace QuickStorage
                 }
                 foreach (var v in storageList)
                 {
-                    for (int j = storageDict[v].items.Length - 1; j >= 0; j--)
+                    if (storageDict[v] is ITileEntityLootable tel)
                     {
-                        var item = storageDict[v].items[j];
-                        if (item.IsEmpty())
-                            continue;
 
-                        var initItem = storageDict[v].items[j].Clone();
-                        int num = storageDict[v].items[j].count;
-                        if (storageDict[v].items[j].itemValue.type == slot.itemValue.type && slot.CanStackPartly(ref num))
+                        for (int j = tel.items.Length - 1; j >= 0; j--)
                         {
-                            storageDict[v].items[j].count -= num;
-                            if(i < slots.Length)
+                            var item = tel.items[j];
+                            if (item.IsEmpty())
+                                continue;
+
+                            var initItem = tel.items[j].Clone();
+                            int num = tel.items[j].count;
+                            if (tel.items[j].itemValue.type == slot.itemValue.type && slot.CanStackPartly(ref num))
                             {
-                                slots[idx].count += num;
-                                bag.onBackpackChanged();
-                            }
-                            else
-                            {
-                                tslots[idx].count += num;
-                                toolbelt.onInventoryChanged();
-                            }
-                            storageDict[v].SetModified();
-                            int moved = initItem.count - storageDict[v].items[j].count;
-                            if (dict.ContainsKey(initItem.itemValue.type))
-                            {
-                                dict[initItem.itemValue.type] += moved;
-                            }
-                            else
-                            {
-                                dict[initItem.itemValue.type] = moved;
+                                tel.items[j].count -= num;
+                                if (i < slots.Length)
+                                {
+                                    slots[idx].count += num;
+                                    bag.onBackpackChanged();
+                                }
+                                else
+                                {
+                                    tslots[idx].count += num;
+                                    toolbelt.onInventoryChanged();
+                                }
+                                tel.SetModified();
+                                int moved = initItem.count - tel.items[j].count;
+                                if (dict.ContainsKey(initItem.itemValue.type))
+                                {
+                                    dict[initItem.itemValue.type] += moved;
+                                }
+                                else
+                                {
+                                    dict[initItem.itemValue.type] = moved;
+                                }
                             }
                         }
                     }
+
                 }
             next:
                 continue;

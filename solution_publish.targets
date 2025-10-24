@@ -217,6 +217,11 @@
       <HintPath>$(UnityPath)\UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="mscorlib">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ManagedDataPath)\mscorlib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <!-- Copy to plugins folder and zip -->

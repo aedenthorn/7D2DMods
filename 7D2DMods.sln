@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedCompassMarkers", "A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiJump", "MultiJump\MultiJump.csproj", "{E53FBE92-7CD3-87F2-9AFF-ED7F2C13A8FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransferToForge", "TransferToForge\TransferToForge.csproj", "{CE48889C-6490-324C-A597-618DAD34AAA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -189,6 +191,10 @@ Global
 		{E53FBE92-7CD3-87F2-9AFF-ED7F2C13A8FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E53FBE92-7CD3-87F2-9AFF-ED7F2C13A8FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E53FBE92-7CD3-87F2-9AFF-ED7F2C13A8FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE48889C-6490-324C-A597-618DAD34AAA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE48889C-6490-324C-A597-618DAD34AAA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE48889C-6490-324C-A597-618DAD34AAA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE48889C-6490-324C-A597-618DAD34AAA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
