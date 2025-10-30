@@ -250,7 +250,7 @@ namespace QuickStorage
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
             var bag = player.bag;
-            if(bag is null)
+            if(bag == null)
             {
                 Dbgl($"Player bag is null");
                 return;
@@ -258,17 +258,19 @@ namespace QuickStorage
             ItemStack[] slots = bag.GetSlots();
             for (int i = config.skipSlots; i < slots.Length; i++)
             {
-                if (slots[i].IsEmpty() || (bag.LockedSlots.Length > i && bag.LockedSlots[i]))
+                if (slots[i] == null || slots[i].IsEmpty() || (bag.LockedSlots?.Length > i && bag.LockedSlots[i]))
                     continue;
                 var initItem = slots[i].Clone();
-                if (initItem is null)
+                if (initItem == null)
                     continue;
-                var itemName = ItemClass.GetForId(initItem.itemValue.type).Name;
-                if (config.storeIgnore.Length > 0)
+                string itemName = ItemClass.GetForId(initItem.itemValue.type)?.Name;
+                if (itemName == null)
+                    continue;
+                if (config.storeIgnore?.Length > 0)
                 {
                     foreach (var s in config.storeIgnore)
                     {
-                        if ((s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))) || itemName.Equals(s))
+                        if ((s.EndsWith("*") && itemName.StartsWith(s.Substring(0, s.Length - 1))) || itemName == s)
                         {
                             Dbgl($"Ignoring {itemName} from config");
                             goto next;
@@ -277,7 +279,9 @@ namespace QuickStorage
                 }
                 foreach (var v in storageList)
                 {
-                    if(storageDict[v] is ITileEntityLootable tel)
+                    if (!storageDict.TryGetValue(v, out var obj))
+                        continue;
+                    if(obj is ITileEntityLootable tel && tel.items != null)
                     {
 
                         if (Array.Exists(tel.items, s => s.itemValue.type == initItem.itemValue.type))
@@ -309,7 +313,7 @@ namespace QuickStorage
                             }
                         }
                     }
-                    else if (storageDict[v] is TileEntityForge tef)
+                    else if (obj is TileEntityForge tef && tef.input != null)
                     {
                         if (Array.Exists(tef.input, s => s.itemValue.type == initItem.itemValue.type))
                         {
@@ -349,7 +353,7 @@ namespace QuickStorage
                 var itemName = ItemClass.GetForId(key).Name;
 
                 Dbgl($"Stored {value} of item {itemName}");
-                world.GetPrimaryPlayer().AddUIHarvestingItem(new ItemStack(new ItemValue(key), -value), false);
+                player.AddUIHarvestingItem(new ItemStack(new ItemValue(key), -value), false);
             }
 
             Dbgl($"Stored {dict.Count} items");

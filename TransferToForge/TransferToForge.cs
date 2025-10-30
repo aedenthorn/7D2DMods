@@ -35,9 +35,10 @@ namespace TransferToForge
         {
             static bool Prefix(XUiC_BackpackWindow __instance, ref string value, string bindingName, ref bool __result)
             {
+
                 if (!config.modEnabled)
                     return true;
-                if (bindingName == "lootingorvehiclestorage" && __instance.xui.GetChildByType<XUiC_WorkstationMaterialInputWindow>() != null)
+                if (bindingName == "lootingorvehiclestorage" && __instance.xui.playerUI.windowManager.IsWindowOpen("workstation_forge"))
                 {
                     value = "true";
                     __result = true;
@@ -54,8 +55,7 @@ namespace TransferToForge
 
             static void Postfix(XUiC_ItemStack __instance)
             {
-
-                if (!config.modEnabled || (__instance.StackLocation != XUiC_ItemStack.StackLocationTypes.Backpack && __instance.StackLocation != XUiC_ItemStack.StackLocationTypes.ToolBelt))
+                if (!config.modEnabled || (__instance.StackLocation != XUiC_ItemStack.StackLocationTypes.Backpack && __instance.StackLocation != XUiC_ItemStack.StackLocationTypes.ToolBelt) || !__instance.xui.playerUI.windowManager.IsWindowOpen("workstation_forge"))
                     return;
                 XUiC_WorkstationMaterialInputWindow input = __instance.xui.GetChildByType<XUiC_WorkstationMaterialInputWindow>();
                 TryMoveStack(__instance, input, true, true);
@@ -68,7 +68,9 @@ namespace TransferToForge
         {
             static bool Prefix(XUiC_ContainerStandardControls __instance)
             {
-                if (!config.modEnabled)
+                Dbgl(__instance.xui.playerUI.windowManager.HasWindow("workstation_forge"));
+
+                if (!config.modEnabled || !__instance.xui.playerUI.windowManager.IsWindowOpen("workstation_forge"))
                     return true;
 
                 var input = __instance.xui.GetChildByType<XUiC_WorkstationMaterialInputWindow>();
@@ -92,7 +94,7 @@ namespace TransferToForge
         {
             static bool Prefix(XUiC_ContainerStandardControls __instance)
             {
-                if (!config.modEnabled)
+                if (!config.modEnabled || !__instance.xui.playerUI.windowManager.IsWindowOpen("workstation_forge"))
                     return true;
                 var input = __instance.xui.GetChildByType<XUiC_WorkstationMaterialInputWindow>();
                 if (input == null)
@@ -116,7 +118,7 @@ namespace TransferToForge
 
         private static void TryMoveStack(XUiC_ItemStack stack, XUiC_WorkstationMaterialInputWindow input, bool combine, bool toEmpty)
         {
-            if (stack.UserLockedSlot || stack.ItemStack.IsEmpty() || string.IsNullOrEmpty(stack.ItemStack?.itemValue?.ItemClass?.MadeOfMaterial?.ForgeCategory) || !input.MaterialNames.Contains(stack.ItemStack.itemValue.ItemClass.MadeOfMaterial.ForgeCategory))
+            if (stack.UserLockedSlot || stack.ItemStack.IsEmpty() || string.IsNullOrEmpty(stack.ItemStack?.itemValue?.ItemClass?.MadeOfMaterial?.ForgeCategory) || input.MaterialNames is null || !input.MaterialNames.Contains(stack.ItemStack.itemValue.ItemClass.MadeOfMaterial.ForgeCategory))
                 return;
 
             Dbgl($"got forge item {stack.ItemStack.itemValue.ItemClass.Name}: {stack.ItemStack.itemValue.ItemClass.MadeOfMaterial.ForgeCategory}");
