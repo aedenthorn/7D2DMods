@@ -86,6 +86,32 @@ namespace MapZoom
 
         }
 
+        private static float OverrideMinZoom(float value)
+        {
+            if (!config.modEnabled)
+                return value;
+            return config.minZoom;
+        }
+
+        private static float OverrideMaxZoom(float value)
+        {
+            if (!config.modEnabled)
+                return value;
+            return config.maxZoom;
+        }
+
+        [HarmonyPatch(typeof(XUiC_MapArea), nameof(XUiC_MapArea.initMap))]
+        static class XUiC_MapArea_initMap_Patch
+        {
+
+            public static void Postfix(XUiC_MapArea __instance)
+            {
+                if (!config.modEnabled)
+                    return;
+                __instance.xuiTexture.Size  *=  2;
+            }
+        }
+
         //[HarmonyPatch(typeof(XUiC_MapArea), nameof(XUiC_MapArea.updateMapSection))]
         static class XUiC_MapArea_updateMapSection_Patch
         {
@@ -231,20 +257,6 @@ namespace MapZoom
 
                 return false;
             }
-        }
-
-        private static float OverrideMinZoom(float value)
-        {
-            if (!config.modEnabled)
-                return value;
-            return config.minZoom;
-        }
-
-        private static float OverrideMaxZoom(float value)
-        {
-            if (!config.modEnabled)
-                return value;
-            return config.maxZoom;
         }
 
         public static void LoadConfig()

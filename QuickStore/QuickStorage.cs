@@ -191,6 +191,8 @@ namespace QuickStorage
                         var loc = tileEntity.ToWorldPos();
                         if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
                             continue;
+                        if (lockedList.Contains(loc))
+                            continue;
                         var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
@@ -200,11 +202,6 @@ namespace QuickStorage
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 {
-                                    if (lockedList.Contains(loc))
-                                    {
-                                        continue;
-                                    }
-
                                     if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
                                     {
                                         storageList.Add(loc);
@@ -217,10 +214,6 @@ namespace QuickStorage
                         var entity2 = (tileEntity as TileEntityForge);
                         if (entity2 != null)
                         {
-                            if (lockedList.Contains(loc))
-                            {
-                                continue;
-                            }
 
                             if (!entity2.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
                             {
@@ -234,10 +227,6 @@ namespace QuickStorage
                         {
                             if (entity3.IsLocked() && !entity3.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 continue;
-                            if (lockedList.Contains(loc))
-                            {
-                                continue;
-                            }
 
                             if (!entity3.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
                             {
@@ -414,6 +403,8 @@ namespace QuickStorage
                         if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
                             continue;
                         var loc = tileEntity.ToWorldPos();
+                        if (lockedList.Contains(loc))
+                            continue;
                         var entity = (tileEntity as TileEntityComposite);
                         if (entity != null)
                         {
@@ -423,11 +414,7 @@ namespace QuickStorage
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                 {
-                                    if (lockedList.Contains(loc))
-                                    {
-                                        Dbgl($"storage is locked!");
-                                        continue;
-                                    }
+
 
                                     if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
                                     {
@@ -435,6 +422,20 @@ namespace QuickStorage
                                         storageDict.Add(loc, lootable);
                                     }
                                 }
+                            }
+                            continue;
+                        }
+
+                        var entity3 = (tileEntity as TileEntitySecureLootContainer);
+                        if (entity3 != null)
+                        {
+                            if (entity3.IsLocked() && !entity3.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                continue;
+
+                            if (!entity3.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
+                            {
+                                storageList.Add(loc);
+                                storageDict.Add(loc, entity3);
                             }
                             continue;
                         }
