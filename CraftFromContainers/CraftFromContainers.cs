@@ -18,6 +18,7 @@ namespace CraftFromContainers
     {
         private static CraftFromContainers context;
         private static Mod mod;
+        public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
         private static Dictionary<Vector3i, ITileEntityLootable> knownStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
         private static Dictionary<Vector3i, ITileEntityLootable> currentStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
         public static ModConfig config;
@@ -50,6 +51,69 @@ namespace CraftFromContainers
             if (config.isDebug)
                 Debug.Log((prefix ? mod.DisplayName + " " : "") + str);
         }
+
+
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TELockServer))]
+        public static class GameManager_TELockServer_Patch
+        {
+            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
+            {
+                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+                    return;
+
+                TileEntity tileEntity;
+                if (_lootEntityId == -1)
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
+                }
+                else
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
+                }
+                if (tileEntity == null)
+                {
+                    return;
+                }
+                if (__instance.lockedTileEntities.ContainsKey(tileEntity))
+                {
+                    Dbgl($"Sending locked message");
+
+                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageCFCLock>().Setup(_blockPos, false), true, -1, -1, -1, null, 192, false);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
+        public static class GameManager_TEUnlockServer_Patch
+        {
+            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
+            {
+                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+                    return;
+
+                TileEntity tileEntity;
+                if (_lootEntityId == -1)
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
+                }
+                else
+                {
+                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
+                }
+                if (tileEntity == null)
+                {
+                    return;
+                }
+                if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
+                {
+                    Dbgl($"Sending unlocked message");
+
+                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageCFCLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
+                }
+            }
+        }
+
+
         [HarmonyPatch(typeof(GameManager), "StartGame")]
         static class GameManager_StartGame_Patch
         {
@@ -906,6 +970,8 @@ namespace CraftFromContainers
                         if (c.tileEntities.dict.TryGetValue(key, out var val))
                         {
                             var loc = val.ToWorldPos();
+                            if (lockedList.Contains(loc))
+                                continue;
                             var entity = (val as TileEntityComposite);
                             if (entity != null)
                             {
@@ -925,12 +991,25 @@ namespace CraftFromContainers
                                     }
 
                                 }
+                                continue;
+                            }
+                            var entity2 = (val as TileEntitySecureLootContainer);
+                            if (entity2 != null)
+                            {
 
+                                if (entity2.IsLocked() && !entity2.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                    continue;
+
+                                EntityAlive entityAlive;
+                                if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                    continue;
+                                knownStorageDict[loc] = entity2;
+                                if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                    currentStorageDict[loc] = entity2;
                             }
                         }
                     }
                     c.ExitReadLock();
-
                 }
             }
 

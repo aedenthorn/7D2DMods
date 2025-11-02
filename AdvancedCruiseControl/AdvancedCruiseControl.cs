@@ -127,6 +127,7 @@ namespace AdvancedCruiseControl
         [HarmonyPatch(typeof(EntityVehicle), nameof(EntityVehicle.MoveByAttachedEntity))]
         static class EntityVehicle_MoveByAttachedEntity_Patch
         {
+
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var codes = new List<CodeInstruction>(instructions);
@@ -137,18 +138,24 @@ namespace AdvancedCruiseControl
                 {
                     if (codes[i].opcode == OpCodes.Stfld && codes[i].operand is FieldInfo && (FieldInfo)codes[i].operand == AccessTools.Field(typeof(MovementInput), nameof(MovementInput.moveForward)))
                     {
+                        var labels = codes[i].ExtractLabels();
                         Dbgl("Adding method to override move forward");
                         codes.Insert(i, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(AdvancedCruiseControl), nameof(AdvancedCruiseControl.OverrideMoveForward))));
                         codes.Insert(i, new CodeInstruction(OpCodes.Ldarg_1));
-                        codes.Insert(i, new CodeInstruction(OpCodes.Ldarg_0));
+                        var ci = new CodeInstruction(OpCodes.Ldarg_0);
+                        ci.labels = labels;
+                        codes.Insert(i, ci);
                         i += 3;
                     }
                     else if (codes[i].opcode == OpCodes.Stfld && codes[i].operand is FieldInfo && (FieldInfo)codes[i].operand == AccessTools.Field(typeof(MovementInput), nameof(MovementInput.running)))
                     {
-                        Dbgl("Adding method to override move forward");
+                        Dbgl("Adding method to override running");
+                        var labels = codes[i].ExtractLabels();
                         codes.Insert(i, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(AdvancedCruiseControl), nameof(AdvancedCruiseControl.OverrideRunning))));
                         codes.Insert(i, new CodeInstruction(OpCodes.Ldarg_1));
-                        codes.Insert(i, new CodeInstruction(OpCodes.Ldarg_0));
+                        var ci = new CodeInstruction(OpCodes.Ldarg_0);
+                        ci.labels = labels;
+                        codes.Insert(i, ci);
                         i += 3;
                     }
                 }
@@ -161,7 +168,6 @@ namespace AdvancedCruiseControl
         {
             if (!config.cruiseEnabled || !cruiseVehicles.Contains(vehicle.GetType()))
                 return result;
-
             LocalPlayerUI uiforPlayer = LocalPlayerUI.GetUIForPlayer(player);
             PlayerActionsVehicle vehicleActions = uiforPlayer.playerInput.VehicleActions;
 
@@ -175,6 +181,7 @@ namespace AdvancedCruiseControl
                 if (currentCruiseState == CruiseState.accelerating)
                 {
                     currentCruiseState = CruiseState.cruising;
+                    Dbgl("from accel to cruise");
                 }
                 else if (currentCruiseState != CruiseState.cruising)
                 {
@@ -184,6 +191,7 @@ namespace AdvancedCruiseControl
             }
             else
             {
+                Dbgl("breaking");
                 currentCruiseState = CruiseState.breaking;
                 currentCruiseAccel = vehicleActions.Move.Y;
             }
