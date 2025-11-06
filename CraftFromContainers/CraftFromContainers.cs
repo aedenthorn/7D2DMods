@@ -606,10 +606,12 @@ namespace CraftFromContainers
                 return count;
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.items;
+                var items = kvp.Value?.items;
+                if (items == null)
+                    continue;
                 for (int j = 0; j < items.Length; j++)
                 {
-                    if (items[j].itemValue.type == item.type)
+                    if (items[j]?.itemValue?.type == item.type)
                     {
                         count += items[j].count;
                     }
@@ -630,7 +632,9 @@ namespace CraftFromContainers
                 return count;
             foreach (var kvp in currentStorageDict)
             {
-                var items = kvp.Value.items;
+                var items = kvp.Value?.items;
+                if(items == null)
+                    continue;
                 for (int j = 0; j < items.Length; j++)
                 {
                     if (items[j].itemValue.type == item.type)
@@ -692,7 +696,8 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
-                items.AddRange(kvp.Value.items);
+                if(kvp.Value?.items != null)
+                    items.AddRange(kvp.Value.items);
             }
         }
 
@@ -708,6 +713,9 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
+
                 var items = kvp.Value.items;
                 numLeft -= GetItemCount(items, _itemStacks[i].itemValue);
                 if(numLeft <= 0)
@@ -727,6 +735,8 @@ namespace CraftFromContainers
             Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
@@ -780,6 +790,8 @@ namespace CraftFromContainers
             int numLeft = count;
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
@@ -832,6 +844,8 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
@@ -874,6 +888,8 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
@@ -894,7 +910,7 @@ namespace CraftFromContainers
             }
             return totalToRemove - numLeft;
         }
-        private static void RemoveRemainingForRepair2(List<ItemStack> _itemStacks, int i, int numLeft)
+        public static void RemoveRemainingForRepair2(List<ItemStack> _itemStacks, int i, int numLeft)
         {
             if (!config.modEnabled)
                 return;
@@ -906,6 +922,8 @@ namespace CraftFromContainers
             Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 var items = kvp.Value.items;
                 for (int j = 0; j < items.Length; j++)
                 {
@@ -979,7 +997,7 @@ namespace CraftFromContainers
                                 if (lootable != null && lootable.bPlayerStorage)
                                 {
                                     var lockable = entity.GetFeature<ILockable>();
-                                    if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                    if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                                     {
                                         EntityAlive entityAlive;
                                         if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())

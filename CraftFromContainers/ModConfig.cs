@@ -13,6 +13,7 @@ namespace CraftFromContainers
         public bool enableForRefuel = true;
         public bool enableForReload = true;
         public bool enableFromVehicles = true;
+        public bool allowLockedContainers = true;
         public float range = -1;
     }
 }

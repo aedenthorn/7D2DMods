@@ -100,7 +100,7 @@ namespace MapZoom
             return config.maxZoom;
         }
 
-        [HarmonyPatch(typeof(XUiC_MapArea), nameof(XUiC_MapArea.initMap))]
+        //[HarmonyPatch(typeof(XUiC_MapArea), nameof(XUiC_MapArea.initMap))]
         static class XUiC_MapArea_initMap_Patch
         {
 

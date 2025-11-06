@@ -490,6 +490,9 @@ namespace QuickStorage
 
                         for (int j = tel.items.Length - 1; j >= 0; j--)
                         {
+                            if (tel.HasSlotLocksSupport && tel.SlotLocks.length > j && tel.SlotLocks[j])
+                                continue;
+
                             var item = tel.items[j];
                             if (item.IsEmpty())
                                 continue;

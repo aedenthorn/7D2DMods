@@ -6,6 +6,5 @@ namespace MapTeleport
         public bool modEnabled = true;
         public bool isDebug = true;
         public bool forceDroneToPlayer = true;
-
     }
 }
