@@ -660,6 +660,8 @@ namespace CraftFromContainers
             itemList.AddRange(items);
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 itemList.AddRange(kvp.Value.items);
 
             }
@@ -679,6 +681,8 @@ namespace CraftFromContainers
             itemList.AddRange(items);
             foreach (var kvp in currentStorageDict)
             {
+                if (kvp.Value?.items == null)
+                    continue;
                 itemList.AddRange(kvp.Value.items);
 
             }
@@ -696,8 +700,10 @@ namespace CraftFromContainers
 
             foreach (var kvp in currentStorageDict)
             {
-                if(kvp.Value?.items != null)
-                    items.AddRange(kvp.Value.items);
+                if (kvp.Value?.items == null)
+                    continue;
+                    
+                items.AddRange(kvp.Value.items);
             }
         }
 
