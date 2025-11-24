@@ -19,8 +19,8 @@ namespace CraftFromContainers
         private static CraftFromContainers context;
         private static Mod mod;
         public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
-        private static Dictionary<Vector3i, ITileEntityLootable> knownStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
-        private static Dictionary<Vector3i, ITileEntityLootable> currentStorageDict = new Dictionary<Vector3i, ITileEntityLootable>();
+        private static Dictionary<Vector3i, object> knownStorageDict = new Dictionary<Vector3i, object>();
+        private static Dictionary<Vector3i, object> currentStorageDict = new Dictionary<Vector3i, object>();
         public static ModConfig config;
         public static object vehicleList;
 
@@ -115,9 +115,9 @@ namespace CraftFromContainers
 
 
         [HarmonyPatch(typeof(GameManager), "StartGame")]
-        static class GameManager_StartGame_Patch
+        public static class GameManager_StartGame_Patch
         {
-            static void Prefix()
+            public static void Prefix()
             {
                 knownStorageDict.Clear();
 
@@ -562,7 +562,77 @@ namespace CraftFromContainers
                 return codes.AsEnumerable();
             }
         }
-        
+
+        private static List<ItemStack> GetStorageItems()
+        {
+            ReloadStorages();
+            List<ItemStack> list = new List<ItemStack>();
+            if (currentStorageDict.Count == 0)
+                return list;
+            foreach (var kvp in currentStorageDict)
+            {
+                if (kvp.Value is ITileEntityLootable tel)
+                {
+                    ItemStack[] items = tel.items;
+                    if (items == null)
+                        continue;
+                    list.AddRange(items);
+                }
+                else if (kvp.Value is Bag bag)
+                {
+                    var items = bag.GetSlots();
+                    if (items != null)
+                        list.AddRange(items);
+                }
+                else
+                    continue;
+
+            }
+            return list;
+        }
+
+        private static int GetAllItemCount(ItemValue item)
+        {
+            int count = 0;
+            ReloadStorages();
+
+            if (currentStorageDict.Count == 0)
+                return count;
+            foreach (var kvp in currentStorageDict)
+            {
+                if (kvp.Value is ITileEntityLootable tel)
+                {
+                    ItemStack[] items = tel.items;
+                    if (items == null)
+                        continue;
+                    for (int j = 0; j < items.Length; j++)
+                    {
+                        if (items[j]?.itemValue?.type == item.type)
+                        {
+                            count += items[j].count;
+                        }
+                    }
+                }
+                else if (kvp.Value is Bag bag)
+                {
+                    ItemStack[] items = bag.GetSlots();
+                    if (items == null)
+                        continue;
+                    for (int j = 0; j < items.Length; j++)
+                    {
+                        if (items[j]?.itemValue?.type == item.type)
+                        {
+                            count += items[j].count;
+                        }
+                    }
+                }
+                else
+                    continue;
+
+            }
+            return count;
+        }
+
         private static int GetItemCountForCanReload(Bag bag, ItemValue _itemValue, int _seed, int _meta, bool _ignoreModdedItems)
         {
             int count = bag.GetItemCount(_itemValue, _seed, _meta, _ignoreModdedItems);
@@ -599,25 +669,7 @@ namespace CraftFromContainers
             if (!config.modEnabled)
                 return count;
 
-
-            ReloadStorages();
-
-            if (currentStorageDict.Count == 0)
-                return count;
-            foreach (var kvp in currentStorageDict)
-            {
-                var items = kvp.Value?.items;
-                if (items == null)
-                    continue;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j]?.itemValue?.type == item.type)
-                    {
-                        count += items[j].count;
-                    }
-                }
-            }
-            return count;
+            return count + GetAllItemCount(item);
         }
         private static int AddAllStoragesCountItemClass(int count, ItemClass itemClass)
         {
@@ -628,45 +680,10 @@ namespace CraftFromContainers
 
             var item = new ItemValue(itemClass.Id, false);
 
-            if (currentStorageDict.Count == 0)
-                return count;
-            foreach (var kvp in currentStorageDict)
-            {
-                var items = kvp.Value?.items;
-                if(items == null)
-                    continue;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j].itemValue.type == item.type)
-                    {
-                        count += items[j].count;
-                    }
-                }
-            }
-            return count;
+            return count + GetAllItemCount(item);
         }
-        
-        private static ItemStack[] GetAllStorageStacksArray(ItemStack[] items)
-        {
-            if (!config.modEnabled)
-                return items;
 
-            ReloadStorages();
 
-            if (currentStorageDict.Count == 0)
-                return items;
-
-            List<ItemStack> itemList = new List<ItemStack>();
-            itemList.AddRange(items);
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                itemList.AddRange(kvp.Value.items);
-
-            }
-            return itemList.ToArray();
-        }
         private static List<ItemStack> GetAllStorageStacksList(List<ItemStack> items)
         {
             if (!config.modEnabled)
@@ -679,14 +696,14 @@ namespace CraftFromContainers
 
             List<ItemStack> itemList = new List<ItemStack>();
             itemList.AddRange(items);
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                itemList.AddRange(kvp.Value.items);
-
-            }
+            itemList.AddRange(GetStorageItems());
             return itemList;
+        }
+        private static ItemStack[] GetAllStorageStacksArray(ItemStack[] items)
+        {
+            if (!config.modEnabled)
+                return items;
+            return GetAllStorageStacksList(items.ToList()).ToArray();
         }
         private static void AddAllStorageStacks(List<ItemStack> items)
         {
@@ -697,36 +714,14 @@ namespace CraftFromContainers
 
             if (currentStorageDict.Count == 0)
                 return;
-
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                    
-                items.AddRange(kvp.Value.items);
-            }
+            items.AddRange(GetStorageItems());
         }
 
         private static int GetTrueRemaining(IList<ItemStack> _itemStacks, int i, int numLeft)
         {
             if (!config.modEnabled)
                 return numLeft;
-
-            ReloadStorages();
-
-            if (currentStorageDict.Count == 0)
-                return numLeft;
-
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-
-                var items = kvp.Value.items;
-                numLeft -= GetItemCount(items, _itemStacks[i].itemValue);
-                if(numLeft <= 0)
-                    return numLeft;
-            }
+            numLeft -= GetAllItemCount(_itemStacks[i].itemValue);
             return numLeft;
         }
         
@@ -739,29 +734,7 @@ namespace CraftFromContainers
             if (currentStorageDict.Count == 0)
                 return;
             Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                var items = kvp.Value.items;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j].itemValue.type == _itemStacks[i].itemValue.type)
-                    {
-                        int toRem = Math.Min(numLeft, items[j].count);
-                        Dbgl($"Removing {toRem}/{numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
-                        numLeft -= toRem;
-                        if (items[j].count <= toRem)
-                            items[j].Clear();
-                        else
-                            items[j].count -= toRem;
-
-                        kvp.Value.SetModified();
-                        if (numLeft <= 0)
-                            return;
-                    }
-                }
-            }
+            DecItem(_itemStacks[i].itemValue, numLeft);
         }
         
         private static int DecItemFortakeFuel(Bag bag, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
@@ -796,24 +769,51 @@ namespace CraftFromContainers
             int numLeft = count;
             foreach (var kvp in currentStorageDict)
             {
-                if (kvp.Value?.items == null)
-                    continue;
-                var items = kvp.Value.items;
-                for (int j = 0; j < items.Length; j++)
+                if (kvp.Value is ITileEntityLootable tel)
                 {
-                    if (items[j].itemValue.type == item.type)
+                    ItemStack[] items = tel.items;
+                    if (items == null)
+                        continue;
+                    for (int j = 0; j < items.Length; j++)
                     {
-                        int toRem = Math.Min(numLeft, items[j].count);
-                        Dbgl($"Removing {toRem}/{numLeft} {item.ItemClass.GetItemName()}");
-                        numLeft -= toRem;
-                        if (items[j].count <= toRem)
-                            items[j].Clear();
-                        else
-                            items[j].count -= toRem;
+                        if (items[j]?.itemValue?.type == item.type)
+                        {
+                            int toRem = Math.Min(numLeft, items[j].count);
+                            Dbgl($"Removing {toRem}/{numLeft} {item.ItemClass.GetItemName()}");
+                            numLeft -= toRem;
+                            if (items[j].count <= toRem)
+                                items[j].Clear();
+                            else
+                                items[j].count -= toRem;
 
-                        kvp.Value.SetModified();
-                        if (numLeft <= 0)
-                            return count;
+                            tel.SetModified();
+                            if (numLeft <= 0)
+                                return count;
+
+                        }
+                    }
+                }
+                else if (kvp.Value is Bag bag)
+                {
+                    ItemStack[] items = bag.GetSlots();
+                    if (items == null)
+                        continue;
+                    for (int j = 0; j < items.Length; j++)
+                    {
+                        if (items[j]?.itemValue?.type == item.type)
+                        {
+                            int toRem = Math.Min(numLeft, items[j].count);
+                            Dbgl($"Removing {toRem}/{numLeft} {item.ItemClass.GetItemName()}");
+                            numLeft -= toRem;
+                            if (items[j].count <= toRem)
+                                items[j].Clear();
+                            else
+                                items[j].count -= toRem;
+
+                            bag.onBackpackChanged();
+                            if (numLeft <= 0)
+                                return count;
+                        }
                     }
                 }
             }
@@ -841,37 +841,9 @@ namespace CraftFromContainers
 
             var numLeft = totalToRemove - numRemoved;
 
-            ReloadStorages();
-
-            Dbgl($"current storage dict has {currentStorageDict.Count} storages");
-
-            if (currentStorageDict.Count == 0)
-                return numRemoved;
-
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                var items = kvp.Value.items;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j].itemValue.type == item.type)
-                    {
-                        Dbgl($"found {items[j].count} in storage");
-
-                        int toRem = Math.Min(numLeft, items[j].count);
-                        numLeft -= toRem;
-                        if (items[j].count <= toRem)
-                            items[j].Clear();
-                        else
-                            items[j].count -= toRem;
-
-                        kvp.Value.SetModified();
-                        if (numLeft <= 0)
-                            return totalToRemove;
-                    }
-                }
-            }
+            numLeft -= DecItem(item, numLeft);
+            if(numLeft <= 0) 
+                return totalToRemove;
             Dbgl($"still missing {numLeft}!");
             return totalToRemove - numLeft;
         }
@@ -887,33 +859,11 @@ namespace CraftFromContainers
 
             var numLeft = totalToRemove - numRemoved;
 
-            ReloadStorages();
 
-            if (currentStorageDict.Count == 0)
-                return numRemoved;
-
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                var items = kvp.Value.items;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j].itemValue.type == _itemStack.itemValue.type)
-                    {
-                        int toRem = Math.Min(numLeft, items[j].count);
-                        numLeft -= toRem;
-                        if (items[j].count <= toRem)
-                            items[j].Clear();
-                        else
-                            items[j].count -= toRem;
-
-                        kvp.Value.SetModified();
-                        if (numLeft <= 0)
-                            return totalToRemove;
-                    }
-                }
-            }
+            numLeft -= DecItem(_itemStack.itemValue, numLeft);
+            if (numLeft <= 0)
+                return totalToRemove;
+            Dbgl($"still missing {numLeft}!");
             return totalToRemove - numLeft;
         }
         public static void RemoveRemainingForRepair2(List<ItemStack> _itemStacks, int i, int numLeft)
@@ -921,34 +871,8 @@ namespace CraftFromContainers
             if (!config.modEnabled)
                 return;
 
-            ReloadStorages();
-
-            if (currentStorageDict.Count == 0)
-                return;
             Dbgl($"Trying to remove {numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
-            foreach (var kvp in currentStorageDict)
-            {
-                if (kvp.Value?.items == null)
-                    continue;
-                var items = kvp.Value.items;
-                for (int j = 0; j < items.Length; j++)
-                {
-                    if (items[j].itemValue.type == _itemStacks[i].itemValue.type)
-                    {
-                        int toRem = Math.Min(numLeft, items[j].count);
-                        Dbgl($"Removing {toRem}/{numLeft} {_itemStacks[i].itemValue.ItemClass.GetItemName()}");
-                        numLeft -= toRem;
-                        if (items[j].count <= toRem)
-                            items[j].Clear();
-                        else
-                            items[j].count -= toRem;
-
-                        kvp.Value.SetModified();
-                        if (numLeft <= 0)
-                            return;
-                    }
-                }
-            }
+            DecItem(_itemStacks[i].itemValue, numLeft);
         }
 
         private static void ReloadStorages()
@@ -974,15 +898,15 @@ namespace CraftFromContainers
                                 if (entity is EntityVehicle)
                                 {
                                     var ev = entity as EntityVehicle;
-                                    if (ev.LocalPlayerIsOwner() && ev.hasStorage())
+                                    if (ev.LocalPlayerIsOwner() && ev.bag != null)
                                     {
                                         var vpos = new Vector3i(ev.position);
                                         Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
-                                        knownStorageDict[vpos] = ev.lootContainer;
+                                        knownStorageDict[vpos] = ev.bag;
                                         if (config.range <= 0 || Vector3.Distance(pos, ev.position) < config.range)
                                         {
                                             Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
-                                            currentStorageDict[new Vector3i(ev.position)] = ev.lootContainer;
+                                            currentStorageDict[new Vector3i(ev.position)] = ev.bag;
                                         }
                                     }
                                 }
@@ -1037,18 +961,6 @@ namespace CraftFromContainers
                 }
             }
 
-        }
-        public static int GetItemCount(ItemStack[] slots, ItemValue _itemValue)
-        {
-            int num = 0;
-            for (int i = 0; i < slots.Length; i++)
-            {
-                if (slots[i].itemValue.type == _itemValue.type)
-                {
-                    num += slots[i].count;
-                }
-            }
-            return num;
         }
     }
 }

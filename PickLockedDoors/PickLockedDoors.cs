@@ -99,7 +99,7 @@ namespace PickLockedDoors
                     lockPickTime = StringParsers.ParseFloat(timeString, 0, -1, NumberStyles.Any);
                 }
                 if(!pickTimeDict.ContainsKey(_blockPos))
-                    pickTimeDict[_blockPos] = lockPickTime; 
+                    pickTimeDict[_blockPos] = EffectManager.GetValue(PassiveEffects.LockPickTime, _player.inventory.holdingItemItemValue, lockPickTime, _player, null, default(FastTags<TagGroup.Global>), true, true, true, true, true, 1, true, false); ; 
 
                 LocalPlayerUI playerUI = (_player as EntityPlayerLocal).PlayerUI;
                 ItemValue item = ItemClass.GetItem(lockPickItem, false);
