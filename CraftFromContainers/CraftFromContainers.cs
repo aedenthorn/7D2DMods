@@ -19,7 +19,7 @@ namespace CraftFromContainers
         private static CraftFromContainers context;
         private static Mod mod;
         public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
-        private static Dictionary<Vector3i, object> knownStorageDict = new Dictionary<Vector3i, object>();
+        //private static Dictionary<Vector3i, object> knownStorageDict = new Dictionary<Vector3i, object>();
         private static Dictionary<Vector3i, object> currentStorageDict = new Dictionary<Vector3i, object>();
         public static ModConfig config;
         public static object vehicleList;
@@ -114,12 +114,12 @@ namespace CraftFromContainers
         }
 
 
-        [HarmonyPatch(typeof(GameManager), "StartGame")]
+        //[HarmonyPatch(typeof(GameManager), "StartGame")]
         public static class GameManager_StartGame_Patch
         {
             public static void Prefix()
             {
-                knownStorageDict.Clear();
+                //knownStorageDict.Clear();
 
             }
         }
@@ -878,7 +878,7 @@ namespace CraftFromContainers
         private static void ReloadStorages()
         {
             currentStorageDict.Clear();
-            knownStorageDict.Clear();
+            //knownStorageDict.Clear();
             var pos = GameManager.Instance.World.GetPrimaryPlayer().position;
             var world = GameManager.Instance.World;
             for (int i = 0; i < world.ChunkClusters.Count; i++)
@@ -902,11 +902,11 @@ namespace CraftFromContainers
                                     {
                                         var vpos = new Vector3i(ev.position);
                                         Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
-                                        knownStorageDict[vpos] = ev.bag;
+                                        //knownStorageDict[vpos] = ev.bag;
                                         if (config.range <= 0 || Vector3.Distance(pos, ev.position) < config.range)
                                         {
                                             Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
-                                            currentStorageDict[new Vector3i(ev.position)] = ev.bag;
+                                            currentStorageDict[vpos] = ev.bag;
                                         }
                                     }
                                 }
@@ -932,7 +932,7 @@ namespace CraftFromContainers
                                         EntityAlive entityAlive;
                                         if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
                                             continue;
-                                        knownStorageDict[loc] = lootable;
+                                        //knownStorageDict[loc] = lootable;
                                         if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
                                             currentStorageDict[loc] = lootable;
 
@@ -951,7 +951,7 @@ namespace CraftFromContainers
                                 EntityAlive entityAlive;
                                 if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
                                     continue;
-                                knownStorageDict[loc] = entity2;
+                                //knownStorageDict[loc] = entity2;
                                 if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
                                     currentStorageDict[loc] = entity2;
                             }

@@ -291,15 +291,15 @@ namespace AdvancedCruiseControl
         [HarmonyPatch(typeof(XUiC_HUDStatBar), nameof(XUiC_HUDStatBar.GetBindingValueInternal))]
         static class XUiC_VehicleStats_GetBindingValue_Patch
         {
-            public static void Postfix(XUiC_HUDStatBar __instance, ref string value, string bindingName)
+            public static void Postfix(XUiC_HUDStatBar __instance, ref string _value, string _bindingName)
             {
-                if (!config.modEnabled || !config.showFuelEconomy || !bindingName.Equals("statcurrentwithmax") || __instance.statType != HUDStatTypes.VehicleFuel || __instance.Vehicle == null || !cruiseVehicles.Contains(__instance.Vehicle.GetType()))
+                if (!config.modEnabled || !config.showFuelEconomy || !_bindingName.Equals("statcurrentwithmax") || __instance.statType != HUDStatTypes.VehicleFuel || __instance.vehicle == null || !cruiseVehicles.Contains(__instance.vehicle.GetType()))
                 {
                     return;
                 }
                 if(currentFuelEconomy > 0)
                 {
-                    value += $" ({currentFuelEconomy}min)";
+                    _value += $" ({currentFuelEconomy}min)";
                 }
             }
         }

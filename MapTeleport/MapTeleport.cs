@@ -26,8 +26,8 @@ namespace MapTeleport
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
         }
-        [HarmonyPatch(typeof(World), nameof(World.SetupTraders))]
-        static class World_SetupTraders_Patch
+        [HarmonyPatch(typeof(GameModeAbstract), nameof(GameModeAbstract.Init))]
+        static class GameModeAbstract_Init_Patch
         {
 
             static void Postfix()
@@ -35,7 +35,7 @@ namespace MapTeleport
                 if (!config.modEnabled || GameStats.GetBool(EnumGameStats.IsTeleportEnabled))
                     return;
                 Dbgl("Enabling teleport");
-                GameStats.SetObject(EnumGameStats.IsTeleportEnabled, true);
+                GameStats.Set(EnumGameStats.IsTeleportEnabled, true);
             }
         }
         

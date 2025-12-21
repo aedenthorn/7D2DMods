@@ -102,7 +102,7 @@ namespace ShowRemainingToClear
                     return true;
                 if (config.showZombieCount)
                 {
-                    value = string.Format(config.remainingTextWithZombies, __instance.QuestObjective.Description, left, zombiesMin, zombiesMax);
+                    value = string.Format(config.remainingTextWithZombiesTemplate, __instance.QuestObjective.Description, string.Format(left == 1 ? config.oneArea : config.xAreas, left), string.Format(zombiesMax == 1 ? config.oneZombie : config.xZombies, zombiesMin == zombiesMax ? zombiesMax+"" : $"{zombiesMin}-{zombiesMax}"));
                 }
                 else
                 {
