@@ -740,6 +740,8 @@ namespace CraftFromContainers
         private static int DecItemFortakeFuel(Bag bag, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
         {
             int num = bag.DecItem(item, count, modded, _removedItems);
+            Dbgl($"Removed {num}/{count} {item.ItemClass.GetItemName()} from bag for vehicle fuel");
+
             if (num == count || !config.enableForRefuel || !config.modEnabled)
                 return num;
             ReloadStorages();
@@ -747,7 +749,7 @@ namespace CraftFromContainers
                 return num;
             int numLeft = count - num;
             Dbgl($"Trying to remove {numLeft} {item.ItemClass.GetItemName()} for vehicle fuel");
-            return DecItem(item, numLeft);
+            return num + DecItem(item, numLeft);
         }
 
 

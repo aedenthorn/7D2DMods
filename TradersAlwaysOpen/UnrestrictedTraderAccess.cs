@@ -509,7 +509,7 @@ namespace UnrestrictedTraderAccess
 
         public static void LoadConfig()
         {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            var path = Path.Combine(mod.Path, "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();

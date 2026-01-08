@@ -67,6 +67,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransferToForge", "Transfer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapZoom", "MapZoom\MapZoom.csproj", "{7C542561-95C3-400B-0E42-74AB49C578B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransferMods", "TransferMods\TransferMods.csproj", "{754F91CC-2FCD-51E9-772F-2CC5D76E1D4F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -201,6 +203,10 @@ Global
 		{7C542561-95C3-400B-0E42-74AB49C578B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C542561-95C3-400B-0E42-74AB49C578B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C542561-95C3-400B-0E42-74AB49C578B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{754F91CC-2FCD-51E9-772F-2CC5D76E1D4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{754F91CC-2FCD-51E9-772F-2CC5D76E1D4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{754F91CC-2FCD-51E9-772F-2CC5D76E1D4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{754F91CC-2FCD-51E9-772F-2CC5D76E1D4F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

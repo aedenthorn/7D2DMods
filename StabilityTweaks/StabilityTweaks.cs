@@ -15,7 +15,6 @@ namespace StabilityTweaks
 {
     public class StabilityTweaks : IModApi
     {
-
         public static ModConfig config;
         public static StabilityTweaks context;
         public static Mod mod;
@@ -23,6 +22,7 @@ namespace StabilityTweaks
         {
             context = this;
             mod = modInstance;
+
             LoadConfig();
 
             Harmony harmony = new Harmony(GetType().ToString());
@@ -30,7 +30,7 @@ namespace StabilityTweaks
 
         }
         [HarmonyPatch(typeof(World), nameof(World.AddFallingBlock))]
-        static class World_AddFallingBlocks_Patch
+        public static class World_AddFallingBlocks_Patch
         {
 
             static bool Prefix()
@@ -40,11 +40,20 @@ namespace StabilityTweaks
                 return false;
             }
         }
-        //[HarmonyPatch(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock))]
-        static class BlockValue_GetForceToOtherBlock_Patch
+        [HarmonyPatch(typeof(ModManager), nameof(ModManager.LoadMods))]
+        public static class ModManager_LoadMods_Patch
         {
 
-            static void Postfix(ref int __result)
+            static void Postfix()
+            {
+                LoadConfig();
+            }
+        }
+        //[HarmonyPatch(typeof(BlockValue), nameof(BlockValue.GetForceToOtherBlock))] aggressive inlining
+        public static class BlockValue_GetForceToOtherBlock_Patch
+        {
+
+            public static void Postfix(ref int __result)
             {
                 if (!config.modEnabled || config.stabilityModifier <= 0)
                     return;
@@ -52,13 +61,11 @@ namespace StabilityTweaks
             }
         }
         [HarmonyPatch(typeof(StabilityCalculator), nameof(StabilityCalculator.CalcPhysicsStabilityToFall))]
-        static class StabilityCalculator_CalcPhysicsStabilityToFall_Patch
+        public static class StabilityCalculator_CalcPhysicsStabilityToFall_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var codes = new List<CodeInstruction>(instructions);
-                if (!config.modEnabled)
-                    return codes;
                 Dbgl("Transpiling StabilityCalculator.CalcPhysicsStabilityToFall");
                 for (int i = 0; i < codes.Count; i++)
                 {
@@ -74,13 +81,11 @@ namespace StabilityTweaks
             }
         }
         [HarmonyPatch(typeof(StabilityCalculator), nameof(StabilityCalculator.GetBlockStability), new Type[] { typeof(Vector3i), typeof(BlockValue) })]
-        static class StabilityCalculator_GetBlockStability_Patch
+        public static class StabilityCalculator_GetBlockStability_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var codes = new List<CodeInstruction>(instructions);
-                if (!config.modEnabled)
-                    return codes;
                 Dbgl("Transpiling StabilityCalculator.GetBlockStability");
                 for (int i = 0; i < codes.Count; i++)
                 {
@@ -96,16 +101,16 @@ namespace StabilityTweaks
             }
         }
 
-        private static int GetStabilityMod(int value)
+        public static int GetStabilityMod(int value)
         {
             if (!config.modEnabled || config.stabilityModifier < 0)
                 return value;
             return Mathf.RoundToInt(value * config.stabilityModifier);
         }
 
-        public void LoadConfig()
+        public static void LoadConfig()
         {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            var path = Path.Combine(mod.Path, "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();

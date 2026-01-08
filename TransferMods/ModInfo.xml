@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+	<Name value="TransferMods" />
+  <DisplayName value="Transfer Mods" />
+  <Description value="Transfer Mods." />
+	<Author value="aedenthorn" />
+	<Version value="0.1.0" />
+</xml>
