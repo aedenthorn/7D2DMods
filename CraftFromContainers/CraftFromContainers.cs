@@ -903,11 +903,11 @@ namespace CraftFromContainers
                                     if (ev.LocalPlayerIsOwner() && ev.bag != null)
                                     {
                                         var vpos = new Vector3i(ev.position);
-                                        Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
+                                        //Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
                                         //knownStorageDict[vpos] = ev.bag;
                                         if (config.range <= 0 || Vector3.Distance(pos, ev.position) < config.range)
                                         {
-                                            Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
+                                            //Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
                                             currentStorageDict[vpos] = ev.bag;
                                         }
                                     }
