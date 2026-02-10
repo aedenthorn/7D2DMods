@@ -83,6 +83,11 @@
       <HintPath>$(ManagedDataPath)\netstandard.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="loglibrary">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(ManagedDataPath)\LogLibrary.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <!-- Add Unity references -->

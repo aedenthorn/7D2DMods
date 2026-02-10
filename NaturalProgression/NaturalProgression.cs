@@ -117,7 +117,7 @@ namespace NaturalProgression
                 if (!config.modEnabled)
                     return;
                 currentSkillType = SkillType.none;
-                if (data.CraftedItemStack?.itemValue is null)
+                if (data?.CraftedItemStack?.itemValue?.ItemClass is null)
                 {
                     return;
                 }
