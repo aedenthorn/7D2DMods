@@ -3,14 +3,11 @@ using Newtonsoft.Json;
 using Platform;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading;
 using UnityEngine;
-using static AIDirectorPlayerInventory;
 
 namespace CraftFromContainers
 {
@@ -881,8 +878,10 @@ namespace CraftFromContainers
         {
             currentStorageDict.Clear();
             //knownStorageDict.Clear();
-            var pos = GameManager.Instance.World.GetPrimaryPlayer().position;
-            var world = GameManager.Instance.World;
+            var world = GameManager.Instance?.World;
+            var pos = world?.GetPrimaryPlayer()?.position;
+            if (pos == null)
+                return;
             for (int i = 0; i < world.ChunkClusters.Count; i++)
             {
 
@@ -905,7 +904,7 @@ namespace CraftFromContainers
                                         var vpos = new Vector3i(ev.position);
                                         //Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
                                         //knownStorageDict[vpos] = ev.bag;
-                                        if (config.range <= 0 || Vector3.Distance(pos, ev.position) < config.range)
+                                        if (config.range <= 0 || Vector3.Distance(pos.Value, ev.position) < config.range)
                                         {
                                             //Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
                                             currentStorageDict[vpos] = ev.bag;
@@ -922,11 +921,11 @@ namespace CraftFromContainers
                             var loc = val.ToWorldPos();
                             if (lockedList.Contains(loc))
                                 continue;
-                            var entity = (val as TileEntityComposite);
-                            if (entity != null)
+                            if (val is TileEntityComposite entity)
                             {
-                                var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
-                                if (lootable != null && lootable.bPlayerStorage)
+                                Dbgl($"got tec {val.block.blockName} at {loc}");
+
+                                if (entity.GetFeature<ITileEntityLootable>() is TEFeatureStorage lootable && lootable.bPlayerStorage)
                                 {
                                     var lockable = entity.GetFeature<ILockable>();
                                     if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
@@ -934,28 +933,37 @@ namespace CraftFromContainers
                                         EntityAlive entityAlive;
                                         if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
                                             continue;
-                                        //knownStorageDict[loc] = lootable;
-                                        if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                        Dbgl("added");
+                                        if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
                                             currentStorageDict[loc] = lootable;
 
                                     }
 
                                 }
-                                continue;
                             }
-                            var entity2 = (val as TileEntitySecureLootContainer);
-                            if (entity2 != null)
+                            else if (val is TileEntitySecureLootContainer entity2)
                             {
 
+                                Dbgl($"got teslc {val.block.blockName} at {loc}");
                                 if (entity2.IsLocked() && !entity2.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                                     continue;
 
                                 EntityAlive entityAlive;
                                 if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
                                     continue;
-                                //knownStorageDict[loc] = entity2;
-                                if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                Dbgl("added");
+                                if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
                                     currentStorageDict[loc] = entity2;
+                            }
+                            else if (val is TileEntityLootContainer entity3 && entity3.GetTileEntityType() == TileEntityType.Loot && entity3.bPlayerStorage && config.allowAllContainers)
+                            {
+                                Dbgl($"got telc {val.block.blockName} at {loc}");
+                                EntityAlive entityAlive;
+                                if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                    continue;
+                                Dbgl("added");
+                                if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
+                                    currentStorageDict[loc] = entity3;
                             }
                         }
                     }
