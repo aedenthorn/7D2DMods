@@ -61,7 +61,7 @@ namespace UnrestrictedTraderAccess
                 transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodTranspiler)) 
             );
             harmony.Patch(
-                original: AccessTools.Method(typeof(World), nameof(World.IsMyLandProtectedBlock)),
+                original: AccessTools.Method(typeof(World), nameof(World.IsMyLandProtectedBlock), new Type[] { typeof(Vector3i), typeof(PersistentPlayerData), typeof(bool )}),
                 transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.LandClaimMethodTranspiler)) 
             );
             
@@ -118,7 +118,7 @@ namespace UnrestrictedTraderAccess
                             Dbgl($"no window");
                         }
                         else { 
-                            window.RefreshBindings(true);
+                            window.RefreshBindings();
                         }
                     }
                 }
@@ -249,7 +249,7 @@ namespace UnrestrictedTraderAccess
                 return true;
             }
             Vector3i vector3i = hitInfo.hit.blockPos;
-            var name = ItemClass.GetForId(GameManager.Instance.World.ChunkClusters[hitInfo.hit.clrIdx].GetBlock(vector3i).type).Name;
+            var name = ItemClass.GetForId(hitInfo.hit.blockValue.ToItemType()).Name;
             LoadConfig();
             if (config.alwaysAllowDamageTypes.Length > 0)
             {
@@ -378,25 +378,26 @@ namespace UnrestrictedTraderAccess
                                         if (area.ProtectBounds.Contains(vector3i))
                                         {
                                             Block block2 = block.Block;
-                                            if (block2 is BlockDoor)
+                                            if (block2.HasTag(BlockTags.Door) && block2 is BlockCompositeTileEntity)
                                             {
-                                                if (_bClosed && BlockDoor.IsDoorOpen(block.meta))
+                                                TileEntityComposite tileEntityComposite = __instance.GetTileEntity(vector3i) as TileEntityComposite;
+                                                if (tileEntityComposite != null && tileEntityComposite.TryGetSelfOrFeature<TEFeatureDoor>(out var door))
+                                                if (_bClosed && door.isOpen)
                                                 {
-                                                    block2.OnBlockActivated(__instance, 0, vector3i, block, null);
+                                                    block2.OnBlockActivated(__instance, vector3i, block, null);
                                                 }
-                                                BlockDoorSecure blockDoorSecure = block2 as BlockDoorSecure;
-                                                if (blockDoorSecure != null)
+                                                if (tileEntityComposite.TryGetSelfOrFeature<TEFeatureLockable>(out var lockable))
                                                 {
                                                     if (_bClosed)
                                                     {
-                                                        if (!blockDoorSecure.IsDoorLocked(__instance, vector3i))
+                                                        if (!lockable.locked)
                                                         {
-                                                            block2.OnBlockActivated("lock", __instance, 0, vector3i, block, null);
+                                                            lockable.SetLocked(true);
                                                         }
                                                     }
-                                                    else if (blockDoorSecure.IsDoorLocked(__instance, vector3i))
+                                                    else if (lockable.locked)
                                                     {
-                                                        block2.OnBlockActivated("unlock", __instance, 0, vector3i, block, null);
+                                                        lockable.SetLocked(false);
                                                     }
                                                 }
                                             }

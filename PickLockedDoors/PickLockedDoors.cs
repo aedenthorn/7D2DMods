@@ -48,7 +48,7 @@ namespace PickLockedDoors
                 pickTimeDict.Clear();
             }
         }
-        [HarmonyPatch(typeof(BlockDoorSecure), nameof(BlockDoorSecure.GetBlockActivationCommands))]
+        [HarmonyPatch(typeof(TEFeatureDoor), nameof(TEFeatureDoor.GetActivationText))]
         static class BlockDoorSecure_GetBlockActivationCommands_Patch
         {
             static void Postfix(WorldBase _world, int _clrIdx, Vector3i _blockPos, ref BlockActivationCommand[] __result)

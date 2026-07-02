@@ -29,7 +29,7 @@ namespace PickupBlocks
             foreach (Type t in addCommandTypes)
             {
                 var mi = t.GetMethod("GetBlockActivationCommands");
-                if (mi.DeclaringType == t)
+                if (mi?.DeclaringType == t)
                 {
                     Dbgl($"Patching {t.Name}.GetBlockActivationCommands");
                     harmony.Patch(
@@ -37,33 +37,17 @@ namespace PickupBlocks
                         postfix: new HarmonyMethod(typeof(PickupBlocks), nameof(GetBlockActivationCommands))
                     );
 
-                    mi = t.GetMethod("OnBlockActivated", new Type[] { typeof(string), typeof(WorldBase), typeof(int), typeof(Vector3i), typeof(BlockValue), typeof(EntityPlayerLocal) });
-                    if (mi.DeclaringType == t)
+                    mi = t.GetMethod("OnBlockActivated", new Type[] { typeof(string), typeof(WorldBase), typeof(Vector3i), typeof(BlockValue), typeof(EntityPlayerLocal) });
+                    if (mi?.DeclaringType == t)
                     {
-                        foreach (var p in mi.GetParameters())
-                        {
-                            if (p.Name == "_cIdx")
-                            {
-                                harmony.Patch(
+                        Dbgl($"Patching {t.Name}.OnBlockActivated");
+                        harmony.Patch(
                                     mi,
-                                    new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedOne))
+                                    new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivated))
                                 );
-                                Dbgl($"Patching {t.Name}.OnBlockActivated");
-                                break;
-                            }
-                            if (p.Name == "_clrIdx")
-                            {
-                                harmony.Patch(
-                                    mi,
-                                    new HarmonyMethod(typeof(PickupBlocks), nameof(OnBlockActivatedTwo))
-                                );
-                                Dbgl($"Patching {t.Name}.OnBlockActivated");
-                                break;
-                            }
-                        }
                     }
                     mi = t.GetMethod("GetActivationText");
-                    if (mi.DeclaringType == t)
+                    if (mi?.DeclaringType == t)
                     {
                         Dbgl($"Patching {t.Name}.GetActivationText");
                         harmony.Patch(
@@ -73,7 +57,7 @@ namespace PickupBlocks
                         );
                     }
                     mi = t.GetMethod("HasBlockActivationCommands");
-                    if (mi.DeclaringType == t)
+                    if (mi?.DeclaringType == t)
                     {
                         Dbgl($"Patching {t.Name}.HasBlockActivationCommands");
                         harmony.Patch(
@@ -104,21 +88,14 @@ namespace PickupBlocks
         }
 
 
-        public static bool OnBlockActivatedOne(Block __instance, string _commandName, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
+        public static bool OnBlockActivated(Block __instance, string _commandName, WorldBase _world, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
             if (!config.EnableMod || _blockValue.ischild || _commandName != "take" || !CanPickupBlock(_world, _blockPos) || !CanPickupBlock(_blockValue.Block.cmds))
                 return true;
-            TakeBlock(_world, _cIdx, _blockPos, _blockValue, _player);
+            TakeBlock(_world, _blockPos, _blockValue, _player);
             return false;
         }
         
-        public static bool OnBlockActivatedTwo(Block __instance, string _commandName, WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
-        {
-            if (!config.EnableMod || _blockValue.ischild || _commandName != "take" || !CanPickupBlock(_world, _blockPos) || !CanPickupBlock(_blockValue.Block.cmds))
-                return true;
-            TakeBlock(_world, _clrIdx, _blockPos, _blockValue, _player);
-            return false;
-        }
         private static void TempCanPickup_Prefix(Block __instance, ref bool __state, WorldBase _world, Vector3i _blockPos)
         {
             if (!config.EnableMod)
@@ -149,16 +126,16 @@ namespace PickupBlocks
             }
             temp.Add(new BlockActivationCommand("take", "hand", enabled, false));
         }
-        private static void TakeBlock(WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
+        private static void TakeBlock(WorldBase _world, Vector3i _blockPos, BlockValue _blockValue, EntityAlive _player)
         {
             Block block = _blockValue.Block;
-            var entity = _world.GetTileEntity(_clrIdx, _blockPos);
-            if (entity?.GetType().Equals(typeof(TileEntityLootContainer)) == true)
+            var entity = _world.GetTileEntity(_blockPos);
+            if (entity?.GetType().Equals(typeof(TileEntityComposite)) == true)
             {
-                var telc = entity as TileEntityLootContainer;
-                 if (telc != null && !telc.IsEmpty() || !telc.bTouched)
+                var telc = entity as TileEntityComposite;
+                 if (telc != null && telc.GetFeature<TEFeatureStorage>() is TEFeatureStorage tefs && (!tefs.IsEmpty() || !tefs.bTouched))
                 {
-                    Dbgl($"{block.blockName} is telc, blocked because empty: {telc.IsEmpty()}, touched {telc.bTouched}");
+                    Dbgl($"{block.blockName} is telc, blocked because empty: {tefs.IsEmpty()}, touched {tefs.bTouched}");
                     GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
                     return;
                 }
@@ -184,7 +161,7 @@ namespace PickupBlocks
                 GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("ttRepairBeforePickup"), string.Empty, "ui_denied", null);
                 return;
             }
-            ItemStack itemStack = block.OnBlockPickedUp(_world, _clrIdx, _blockPos, _blockValue, _player.entityId);
+            ItemStack itemStack = block.OnBlockPickedUp(_world, _blockPos, _blockValue, _player.entityId);
             if (!_player.inventory.CanTakeItem(itemStack) && !_player.bag.CanTakeItem(itemStack))
             {
                 GameManager.ShowTooltip(_player as EntityPlayerLocal, Localization.Get("xuiInventoryFullForPickup"), string.Empty, "ui_denied", null);
@@ -192,10 +169,10 @@ namespace PickupBlocks
             }
 
             //block.CanPickup = true;
-            block.PickedUpItemValue = block.Properties.Params1[Block.PropCanPickup];
+            block.PickedUpItemValue = block.Properties.Params1.TryGetValue(Block.PropCanPickup, out var val) ? val : null;
             QuestEventManager.Current.BlockPickedUp(block.GetBlockName(), _blockPos);
             QuestEventManager.Current.ItemAdded(itemStack);
-            _world.GetGameManager().PickupBlockServer(_clrIdx, _blockPos, _blockValue, _player.entityId, null);
+            _world.GetGameManager().PickupBlockServer(_blockPos, _blockValue, _player.entityId, null);
         }
 
         [HarmonyPatch(typeof(GameManager), "Update")]

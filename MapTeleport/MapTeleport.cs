@@ -26,8 +26,8 @@ namespace MapTeleport
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
         }
-        [HarmonyPatch(typeof(GameModeAbstract), nameof(GameModeAbstract.Init))]
-        static class GameModeAbstract_Init_Patch
+        [HarmonyPatch(typeof(GameModeAbstract), nameof(GameModeAbstract.ResetGamePrefs))]
+        static class GameModeAbstract_ResetGamePrefs_Patch
         {
 
             static void Postfix()
@@ -35,6 +35,18 @@ namespace MapTeleport
                 if (!config.modEnabled || GameStats.GetBool(EnumGameStats.IsTeleportEnabled))
                     return;
                 Dbgl("Enabling teleport");
+                GameStats.Set(EnumGameStats.IsTeleportEnabled, true);
+            }
+        }
+        [HarmonyPatch(typeof(GameStateManager), nameof(GameStateManager.InitGame))]
+        static class GameStateManager_InitGame_Patch
+        {
+
+            static void Postfix(GameStateManager __instance)
+            {
+                if (!config.modEnabled || GameStats.GetBool(EnumGameStats.IsTeleportEnabled))
+                    return;
+                Dbgl($"Enabling teleport; server: {__instance.bServer}");
                 GameStats.Set(EnumGameStats.IsTeleportEnabled, true);
             }
         }
@@ -81,7 +93,7 @@ namespace MapTeleport
                     }
                 }
 
-                LocalPlayerUI.GetUIForPlayer(__instance.xui.playerUI.entityPlayer).windowManager.CloseAllOpenWindows(null, false);
+                LocalPlayerUI.GetUIForPlayer(__instance.xui.playerUI.entityPlayer).windowManager.CloseAllOpenModalWindows(null, false);
 
             }
         }

@@ -68,8 +68,6 @@ namespace CustomPosters
         {
             static bool Prefix(XUiC_ContainerStandardControls __instance)
             {
-                Dbgl(__instance.xui.playerUI.windowManager.HasWindow("workstation_forge"));
-
                 if (!config.modEnabled || !__instance.xui.playerUI.windowManager.IsWindowOpen("workstation_forge"))
                     return true;
 

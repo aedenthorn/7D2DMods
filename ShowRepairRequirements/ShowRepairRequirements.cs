@@ -32,7 +32,7 @@ namespace ShowRepairRequirements
                 repairTooltip = "";
                 if (!config.modEnabled || !(__instance.itemActionEntry is ItemActionEntryRepair) || (__instance.itemActionEntry as ItemActionEntryRepair).state == ItemActionEntryRepair.StateTypes.RecipeLocked)
                     return;
-                if (__instance.xui.currentToolTip != null)
+                if (__instance.xui.ToolTipWindow != null)
                 {
                     if (_isOver && __instance.ItemActionEntry.ItemController is XUiC_ItemStack)
                     {
@@ -64,10 +64,10 @@ namespace ShowRepairRequirements
         {
             static void Postfix(XUiView __instance, bool _isOver)
             {
-                if (!config.modEnabled || string.IsNullOrEmpty(repairTooltip) || __instance.xui.currentToolTip == null)
+                if (!config.modEnabled || string.IsNullOrEmpty(repairTooltip) || __instance.xui.ToolTipWindow == null)
                     return;
                 //Dbgl($"{__instance.GetType()} {__instance.ID}");
-                __instance.xui.currentToolTip.ToolTip = repairTooltip;
+                __instance.xui.ToolTipWindow.ToolTip = repairTooltip;
             }
         }
         [HarmonyPatch(typeof(ItemActionAttack), nameof(ItemActionAttack.OnHUD))]
@@ -98,10 +98,10 @@ namespace ShowRepairRequirements
                 {
                     return;
                 }
-                BlockValue blockValue = _actionData.invData.hitInfo.hit.blockValue;
+                BlockValue blockValue = _actionData.hitInfo.hit.blockValue;
                 if (blockValue.ischild)
                 {
-                    Vector3i parentPos = blockValue.Block.multiBlockPos.GetParentPos(_actionData.invData.hitInfo.hit.blockPos, blockValue);
+                    Vector3i parentPos = blockValue.Block.multiBlockPos.GetParentPos(_actionData.hitInfo.hit.blockPos, blockValue);
                     blockValue = _actionData.invData.world.GetBlock(parentPos);
                 }
                 Block block = blockValue.Block;
@@ -142,7 +142,7 @@ namespace ShowRepairRequirements
             {
                 if (!config.modEnabled || !config.showForBlocks || !(__instance is XUiC_FocusedBlockHealth))
                     return;
-                __instance.WindowGroup.SetSize(160, 80);
+                __instance.ViewComponent.Size = new Vector2i(160, 80);
                 for(int i = 0; i < __instance.Children.Count; i++)
                 {
                     if (__instance.Children[i].ViewComponent is XUiV_Label)

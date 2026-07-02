@@ -882,94 +882,89 @@ namespace CraftFromContainers
             var pos = world?.GetPrimaryPlayer()?.position;
             if (pos == null)
                 return;
-            for (int i = 0; i < world.ChunkClusters.Count; i++)
+            foreach (var c in world.ChunkCache.chunks.dict.Values.ToArray())
             {
-
-                var cc = world.ChunkClusters[i];
-
-                foreach (var c in cc.chunks.dict.Values.ToArray())
+                c.EnterReadLock();
+                if (config.enableFromVehicles)
                 {
-                    c.EnterReadLock();
-                    if (config.enableFromVehicles)
+                    foreach (var el in c.entityLists)
                     {
-                        foreach (var el in c.entityLists)
+                        foreach (var entity in el)
                         {
-                            foreach (var entity in el)
+                            if (entity is EntityVehicle)
                             {
-                                if (entity is EntityVehicle)
+                                var ev = entity as EntityVehicle;
+                                if (ev.LocalPlayerIsOwner() && ev.bag != null)
                                 {
-                                    var ev = entity as EntityVehicle;
-                                    if (ev.LocalPlayerIsOwner() && ev.bag != null)
+                                    var vpos = new Vector3i(ev.position);
+                                    //Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
+                                    //knownStorageDict[vpos] = ev.bag;
+                                    if (config.range <= 0 || Vector3.Distance(pos.Value, ev.position) < config.range)
                                     {
-                                        var vpos = new Vector3i(ev.position);
-                                        //Dbgl($"adding vehicle {ev.EntityName} at {vpos}");
-                                        //knownStorageDict[vpos] = ev.bag;
-                                        if (config.range <= 0 || Vector3.Distance(pos.Value, ev.position) < config.range)
-                                        {
-                                            //Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
-                                            currentStorageDict[vpos] = ev.bag;
-                                        }
+                                        //Dbgl($"adding vehicle to current list {ev.EntityName} at {vpos}");
+                                        currentStorageDict[vpos] = ev.bag;
                                     }
                                 }
                             }
                         }
                     }
-                    foreach (var key in c.tileEntities.dict.Keys.ToArray())
-                    {
-                        if (c.tileEntities.dict.TryGetValue(key, out var val))
-                        {
-                            var loc = val.ToWorldPos();
-                            if (lockedList.Contains(loc))
-                                continue;
-                            if (val is TileEntityComposite entity)
-                            {
-                                Dbgl($"got tec {val.block.blockName} at {loc}");
-
-                                if (entity.GetFeature<ITileEntityLootable>() is TEFeatureStorage lootable && lootable.bPlayerStorage)
-                                {
-                                    var lockable = entity.GetFeature<ILockable>();
-                                    if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
-                                    {
-                                        EntityAlive entityAlive;
-                                        if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                            continue;
-                                        Dbgl("added");
-                                        if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
-                                            currentStorageDict[loc] = lootable;
-
-                                    }
-
-                                }
-                            }
-                            else if (val is TileEntitySecureLootContainer entity2)
-                            {
-
-                                Dbgl($"got teslc {val.block.blockName} at {loc}");
-                                if (entity2.IsLocked() && !entity2.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
-                                    continue;
-
-                                EntityAlive entityAlive;
-                                if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                    continue;
-                                Dbgl("added");
-                                if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
-                                    currentStorageDict[loc] = entity2;
-                            }
-                            else if (val is TileEntityLootContainer entity3 && entity3.GetTileEntityType() == TileEntityType.Loot && entity3.bPlayerStorage && config.allowAllContainers)
-                            {
-                                Dbgl($"got telc {val.block.blockName} at {loc}");
-                                EntityAlive entityAlive;
-                                if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                    continue;
-                                Dbgl("added");
-                                if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
-                                    currentStorageDict[loc] = entity3;
-                            }
-                        }
-                    }
-                    c.ExitReadLock();
                 }
+                foreach (var key in c.tileEntities.dict.Keys.ToArray())
+                {
+                    if (c.tileEntities.dict.TryGetValue(key, out var val))
+                    {
+                        var loc = val.ToWorldPos();
+                        if (lockedList.Contains(loc))
+                            continue;
+                        if (val is TileEntityComposite entity)
+                        {
+                            Dbgl($"got tec {val.block.blockName} at {loc}");
+
+                            if (entity.GetFeature<ITileEntityLootable>() is TEFeatureStorage lootable && lootable.bPlayerStorage)
+                            {
+                                var lockable = entity.GetFeature<ILockable>();
+                                if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
+                                {
+                                    EntityAlive entityAlive;
+                                    if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                        continue;
+                                    Dbgl("added");
+                                    if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
+                                        currentStorageDict[loc] = lootable;
+
+                                }
+
+                            }
+                        }
+                        else if (val is TileEntitySecureLootContainer entity2)
+                        {
+
+                            Dbgl($"got teslc {val.block.blockName} at {loc}");
+                            if (entity2.IsLocked() && !entity2.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                continue;
+
+                            EntityAlive entityAlive;
+                            if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                continue;
+                            Dbgl("added");
+                            if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
+                                currentStorageDict[loc] = entity2;
+                        }
+                        else if (val is TileEntityLootContainer entity3 && entity3.GetTileEntityType() == TileEntityType.Loot && entity3.bPlayerStorage && config.allowAllContainers)
+                        {
+                            Dbgl($"got telc {val.block.blockName} at {loc}");
+                            EntityAlive entityAlive;
+                            if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
+                                continue;
+                            Dbgl("added");
+                            if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
+                                currentStorageDict[loc] = entity3;
+                        }
+                    }
+                }
+                c.ExitReadLock();
             }
+
 
         }
     }

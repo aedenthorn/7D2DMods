@@ -78,7 +78,7 @@ namespace KillNotification
             {
                 return false;
             }
-            if (!xmlData.Update())
+            if (!xmlData.CanAddANewVoice())
             {
                 return false;
             }

@@ -211,17 +211,11 @@ namespace QuickHarvest
                             if (config.replaceCrop && !newBlock.Equals(BlockValue.Air))
                             {
                                 Dbgl($"replacing crop with {newBlock.Block.blockName}");
-                                GameManager.Instance.SetBlocksRPC(new List<BlockChangeInfo> {  new BlockChangeInfo
-                                {
-                                    pos = newPos,
-                                    clrIdx = 0,
-                                    bChangeBlockValue = true,
-                                    blockValue = newBlock
-                                } });
+                                GameManager.Instance.SetBlocksRPC(new List<BlockChangeInfo> { new BlockChangeInfo(newPos, newBlock, true) });
                             }
                             else
                             {
-                                bv.Block.DamageBlock(player.world, 0, newPos, bv, 1, player.entityId);
+                                bv.Block.DamageBlock(player.world, newPos, bv, 1, player.entityId);
                             }
                             count++;
                         }
