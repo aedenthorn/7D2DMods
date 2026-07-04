@@ -25,7 +25,6 @@ namespace RemoteStorageAccess
         public static Dictionary<string, string> nameDict = new Dictionary<string, string>();
         public static List<EntityVehicle> vehicleList = new List<EntityVehicle>();
         public static bool showingList;
-        public static string nameDictPath;
         public static float elapsedTime;
         public static bool editing;
         public static Rect windowRect;
@@ -78,17 +77,16 @@ namespace RemoteStorageAccess
         {
             static void Prefix()
             {
-                nameDictPath = null;
                 knownStorageDict.Clear();
 
             }
         }
-        [HarmonyPatch(typeof(GameManager), "lootContainerOpened")]
-        static class GameManager_lootContainerOpened_Patch
+        [HarmonyPatch(typeof(LootManager), nameof(LootManager.LootContainerOpened))]
+        public static class LootManager_LootContainerOpened_Patch
         {
-            static void Postfix(ITileEntity _te)
+            public static void Postfix(ITileEntityLootable _tileEntity)
             {
-                ITileEntityLootable selfOrFeature = _te.GetSelfOrFeature<ITileEntityLootable>();
+                ITileEntityLootable selfOrFeature = _tileEntity.GetSelfOrFeature<ITileEntityLootable>();
                 if (selfOrFeature == null || !config.modEnabled || !selfOrFeature.bPlayerStorage)
                 {
                     return;
@@ -96,17 +94,17 @@ namespace RemoteStorageAccess
 
                 if (sortedStorageList.Count == 0)
                     ReloadStorages();
-                if (sortedStorageList.Contains(_te.ToWorldPos()) && currentStorage != _te.ToWorldPos())
+                if (sortedStorageList.Contains(_tileEntity.ToWorldPos()) && currentStorage != _tileEntity.ToWorldPos())
                 {
-                    currentStorage = _te.ToWorldPos();
+                    currentStorage = _tileEntity.ToWorldPos();
                 }
             }
         }
         [HarmonyPatch(typeof(GameManager), "Update")]
-        static class GameManager_Update_Patch
+        public static class GameManager_Update_Patch
         {
 
-            static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
+            public static void Postfix(World ___m_World, GUIWindowManager ___windowManager)
             {
                 if (frameCount > -1)
                 {
@@ -119,12 +117,6 @@ namespace RemoteStorageAccess
                 }
                 if (!config.modEnabled || ___m_World?.GetPrimaryPlayer() == null)
                     return;
-
-                if (nameDictPath is null)
-                {
-                    nameDictPath = Path.Combine(AedenthornUtils.GetAssetPath(context, true), ___m_World.Guid + ".json");
-                    ReloadStorages();
-                }
 
                 if (showingList && !editing)
                 {
@@ -142,7 +134,7 @@ namespace RemoteStorageAccess
                     Dbgl($"Pressed open key");
                     if (___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("looting") || ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.IsWindowOpen("vehicleStorage"))
                     {
-                        ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenWindows(null, true);
+                        ___m_World.GetPrimaryPlayer().PlayerUI.windowManager.CloseAllOpenModalWindows(null, true);
                     }
                     else
                     {
@@ -176,7 +168,6 @@ namespace RemoteStorageAccess
                     if (showingList)
                     {
                         Dbgl($"Closing window");
-                        File.WriteAllText(nameDictPath, JsonConvert.SerializeObject(nameDict));
                         showingList = false;
                     }
                     else
@@ -305,21 +296,16 @@ namespace RemoteStorageAccess
             }
 
         }
-        [HarmonyPatch(typeof(XUiC_LootWindowGroup), nameof(XUiC_LootWindowGroup.SetTileEntityChest))]
-        static class XUiC_LootWindowGroup_SetTileEntityChest_Patch
+        [HarmonyPatch(typeof(XUiC_LootWindow), nameof(XUiC_LootWindow.SetTileEntityChest))]
+        static class XUiC_LootWindow_SetTileEntityChest_Patch
         {
-            static void Postfix(XUiC_LootWindow ___lootWindow, TileEntityLootContainer _te, ref string ___lootingHeader)
+            static void Postfix()
             {
-                if (!config.modEnabled || !_te.bPlayerStorage || GameManager.Instance?.World is null)
+                if (!config.modEnabled)
                     return;
                 if(sortedStorageList.Count == 0)
                     ReloadStorages();
-                ___lootingHeader = config.uiTitleText;
-                if (nameDict.TryGetValue(ToXYZ(_te.ToWorldPos()), out string name) && name != "")
-                {
-                    AccessTools.Field(typeof(XUiC_LootWindow), "lootContainerName").SetValue(___lootWindow, name);
-                    ___lootWindow.RefreshBindings();
-                }
+
             }
         }
 
@@ -370,74 +356,73 @@ namespace RemoteStorageAccess
             return true;
         }
 
-        [HarmonyPatch(typeof(BlockSecureLoot), nameof(BlockSecureLoot.GetActivationText))]
-        static class BlockSecureLoot_GetActivationText_Patch
-        {
-            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                Dbgl("Transpiling BlockSecureLoot_GetActivationText");
-                var codes = new List<CodeInstruction>(instructions);
-                for (int i = 0; i < codes.Count; i++)
-                {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
-                    {
-                        Dbgl($"Using method to get string for storage hover name at {i}");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
-                        break;
-                    }
-                }
+        //[HarmonyPatch(typeof(BlockCompositeTileEntity), nameof(BlockCompositeTileEntity.GetActivationText))]
+        //static class BlockCompositeTileEntity_GetActivationText_Patch
+        //{
+        //    public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        //    {
+        //        Dbgl("Transpiling BlockSecureLoot_GetActivationText");
+        //        var codes = new List<CodeInstruction>(instructions);
+        //        for (int i = 0; i < codes.Count; i++)
+        //        {
+        //            if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
+        //            {
+        //                Dbgl($"Using method to get string for storage hover name at {i}");
+        //                codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
+        //                codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
+        //                break;
+        //            }
+        //        }
 
-                return codes.AsEnumerable();
-            }
-        }
+        //        return codes.AsEnumerable();
+        //    }
+        //}
         
-        [HarmonyPatch(typeof(BlockSecureLootSigned), nameof(BlockSecureLootSigned.GetActivationText))]
-        static class BlockSecureLootSigned_GetActivationText_Patch
-        {
-            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                Dbgl("Transpiling BlockSecureLootSigned_GetActivationText");
-                var codes = new List<CodeInstruction>(instructions);
-                for (int i = 0; i < codes.Count; i++)
-                {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
-                    {
-                        Dbgl($"Using method to get string for storage hover name at {i}");
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
-                        codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
-                        break;
-                    }
-                }
+        //[HarmonyPatch(typeof(BlockSecureLootSigned), nameof(BlockSecureLootSigned.GetActivationText))]
+        //static class BlockSecureLootSigned_GetActivationText_Patch
+        //{
+        //    public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        //    {
+        //        Dbgl("Transpiling BlockSecureLootSigned_GetActivationText");
+        //        var codes = new List<CodeInstruction>(instructions);
+        //        for (int i = 0; i < codes.Count; i++)
+        //        {
+        //            if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Block), nameof(Block.GetLocalizedBlockName)))
+        //            {
+        //                Dbgl($"Using method to get string for storage hover name at {i}");
+        //                codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(RemoteStorageAccess), nameof(RemoteStorageAccess.GetStorageNameForTranspiler))));
+        //                codes.Insert(i + 1, new CodeInstruction(OpCodes.Ldloc_0));
+        //                break;
+        //            }
+        //        }
 
-                return codes.AsEnumerable();
-            }
-        }
+        //        return codes.AsEnumerable();
+        //    }
+        //}
         private static float GetCollectDistanceForTranspiler(float distance)
         {
             if (!config.modEnabled)
                 return distance;
             return float.MaxValue / 2f;
         }
-        private static string GetStorageNameForTranspiler(string input, TileEntityLootContainer te)
-        {
-            if (!config.modEnabled || !nameDict.TryGetValue(ToXYZ(te.ToWorldPos()), out string name) || name == "")
-                return input;
-            return name;
-        }
+        //private static string GetStorageNameForTranspiler(string input, TileEntityLootContainer te)
+        //{
+        //    if (!config.modEnabled || !nameDict.TryGetValue(ToXYZ(te.ToWorldPos()), out string name) || name == "")
+        //        return input;
+        //    return name;
+        //}
 
         public static void OpenStorage()
         {
 
-            if (sortedStorageList.Count > 0)
+            if (knownStorageDict.TryGetValue(currentStorage, out var data) && data.te is TEFeatureStorage tef)
             {
                 frameCount = 0;
                 var player = GameManager.Instance.World.GetPrimaryPlayer();
                 var ui = LocalPlayerUI.GetUIForPlayer(player);
                 lastCursorPos = MouseLib.GetGlobalMousePosition();
-                ui.windowManager.CloseAllOpenWindows(null, false);
-                GameManager.Instance.TELockServer(currentStorageDict[currentStorage].cluster, currentStorage, currentStorageDict[currentStorage].te.Parent.EntityId, player.entityId, "container");
-
+                ui.windowManager.CloseAllOpenModalWindows(null, false);
+                LockManager.Instance.LockRequestLocal(tef, null, 0);
             }
         }
         public static void OpenVehicleStorage()
@@ -449,9 +434,9 @@ namespace RemoteStorageAccess
                 var player = GameManager.Instance.World.GetPrimaryPlayer();
                 var ui = LocalPlayerUI.GetUIForPlayer(player);
                 lastCursorPos = MouseLib.GetGlobalMousePosition();
-                ui.windowManager.CloseAllOpenWindows(null, false);
+                ui.windowManager.CloseAllOpenModalWindows(null, false);
                 var ve = vehicleList[Mathf.Clamp(currentVehicleStorage, 0, vehicleList.Count - 1)];
-                ve.OnEntityActivated(9, ve.GetBlockPosition(), player);
+                ve.OnEntityActivated(new EntityActivationCommand("storage", "loot_sack", null, null), player);
 
             }
         }
@@ -460,80 +445,68 @@ namespace RemoteStorageAccess
             var world = GameManager.Instance?.World;
             if (world == null)
                 return;
-            if(!polling)
-                Dbgl($"Loading storages, {world.ChunkClusters.Count} ccs");
 
             var pos = world.GetPrimaryPlayer().position;
 
             currentStorageDict.Clear();
             vehicleList.Clear();
-            nameDict = File.Exists(nameDictPath) ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(nameDictPath)) : new Dictionary<string, string>();
-            for(int i = 0; i < world.ChunkClusters.Count; i++)
+
+            foreach (var c in world.ChunkCache.chunks.list)
             {
+                c.EnterReadLock();
 
-                var cc = world.ChunkClusters[i];
-
-                if (!polling)
-                    Dbgl($"cc has {cc.chunks.dict.Count} chunks");
-                foreach (var key in cc.chunks.dict.Keys.ToArray())
+                if (config.includeVehicles)
                 {
-                    var c= cc.chunks.dict[key];
-                    c.EnterReadLock();
-
-                    if (config.includeVehicles)
+                    foreach (var el in c.entityLists)
                     {
-                        foreach (var el in c.entityLists)
+                        foreach (var entity in el)
                         {
-                            foreach(var entity in el)
+                            if (entity is EntityVehicle)
                             {
-                                if (entity is EntityVehicle)
+                                var ev = entity as EntityVehicle;
+                                if (ev.LocalPlayerIsOwner() && ev.hasStorage())
                                 {
-                                    var ev = entity as EntityVehicle;
-                                    if (ev.LocalPlayerIsOwner() && ev.hasStorage())
-                                    {
-                                        vehicleList.Add(ev);
-                                    }
+                                    vehicleList.Add(ev);
                                 }
                             }
                         }
                     }
-                    foreach (var kvp in c.tileEntities.dict)
-                    {
-                        var loc = kvp.Value.ToWorldPos();
-                        var entity = (kvp.Value as TileEntityComposite);
-                        if (entity != null)
-                        {
-                            var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
-                            if (lootable != null && lootable.bPlayerStorage)
-                            {
-                                var lockable = entity.GetFeature<ILockable>();
-                                if(lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
-                                {
-                                    lootable.bWasTouched = lootable.bTouched;
-                                    knownStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = lootable };
-                                    if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
-                                        currentStorageDict[loc] = new StorageData() { chunk = c, cluster = i, te = lootable };
-                                    var xyz = ToXYZ(loc);
-                                    if (!nameDict.ContainsKey(xyz))
-                                    {
-                                        nameDict[xyz] = "";
-                                    }
-                                    if (nameDict[xyz] == "")
-                                    {
-                                        var text = entity.GetFeature<ITileEntitySignable>() as TEFeatureSignable;
-                                        if (text != null && !string.IsNullOrEmpty(text.GetAuthoredText().Text))
-                                        {
-                                            nameDict[xyz] = text.GetAuthoredText().Text;
-                                        }
-
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    c.ExitReadLock();
-
                 }
+                foreach (var kvp in c.tileEntities.dict)
+                {
+                    var loc = kvp.Value.ToWorldPos();
+                    var entity = (kvp.Value as TileEntityComposite);
+                    if (entity != null)
+                    {
+                        var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
+                        if (lootable != null && lootable.bPlayerStorage)
+                        {
+                            var lockable = entity.GetFeature<ILockable>();
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                            {
+                                lootable.bWasTouched = lootable.bTouched;
+                                knownStorageDict[loc] = new StorageData() { chunk = c, te = lootable };
+                                if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
+                                    currentStorageDict[loc] = new StorageData() { chunk = c, te = lootable };
+                                var xyz = ToXYZ(loc);
+                                if (!nameDict.ContainsKey(xyz))
+                                {
+                                    nameDict[xyz] = "";
+                                }
+                                if (nameDict[xyz] == "")
+                                {
+                                    var text = entity.GetFeature<ITileEntitySignable>() as TEFeatureSignable;
+                                    if (text != null && !string.IsNullOrEmpty(text.GetAuthoredText().Text))
+                                    {
+                                        nameDict[xyz] = text.GetAuthoredText().Text;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                c.ExitReadLock();
+
             }
             if (!polling)
             {

@@ -50,66 +50,6 @@ namespace CraftFromContainers
         }
 
 
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TELockServer))]
-        public static class GameManager_TELockServer_Patch
-        {
-            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
-            {
-                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-                    return;
-
-                TileEntity tileEntity;
-                if (_lootEntityId == -1)
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
-                }
-                else
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
-                }
-                if (tileEntity == null)
-                {
-                    return;
-                }
-                if (__instance.lockedTileEntities.ContainsKey(tileEntity))
-                {
-                    Dbgl($"Sending locked message");
-
-                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageCFCLock>().Setup(_blockPos, false), true, -1, -1, -1, null, 192, false);
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
-        public static class GameManager_TEUnlockServer_Patch
-        {
-            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
-            {
-                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-                    return;
-
-                TileEntity tileEntity;
-                if (_lootEntityId == -1)
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
-                }
-                else
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
-                }
-                if (tileEntity == null)
-                {
-                    return;
-                }
-                if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
-                {
-                    Dbgl($"Sending unlocked message");
-
-                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageCFCLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
-                }
-            }
-        }
-
 
         //[HarmonyPatch(typeof(GameManager), "StartGame")]
         public static class GameManager_StartGame_Patch
@@ -235,7 +175,7 @@ namespace CraftFromContainers
             }
         }
         
-        [HarmonyPatch(typeof(AnimatorRangedReloadState), nameof(AnimatorRangedReloadState.GetAmmoCountToReload))]
+        [HarmonyPatch(typeof(AnimatorRangedReloadState), nameof(AnimatorRangedReloadState.GetAmmoCount))]
         static class AnimatorRangedReloadState_GetAmmoCountToReload_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -244,13 +184,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
-                    {
-                        Dbgl("Adding method to remove from storages");
-                        codes[i].opcode = OpCodes.Call;
-                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForGetAmmoCountToReload));
-                    }
-                    else if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
                     {
                         Dbgl("Adding method to get item count from storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
@@ -262,12 +196,12 @@ namespace CraftFromContainers
             }
         }
         
-        [HarmonyPatch(typeof(Animator3PRangedReloadState), nameof(Animator3PRangedReloadState.GetAmmoCountToReload))]
-        static class Animator3PRangedReloadState_GetAmmoCountToReload_Patch
+        [HarmonyPatch(typeof(ItemActionRanged), nameof(ItemActionRanged.CompleteReload))]
+        static class ItemActionRanged_CompleteReload_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                Dbgl("Transpiling Animator3PRangedReloadState.GetAmmoCountToReload");
+                Dbgl("Transpiling ItemActionRanged.CompleteReload");
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
@@ -275,9 +209,24 @@ namespace CraftFromContainers
                     {
                         Dbgl("Adding method to remove from storages");
                         codes[i].opcode = OpCodes.Call;
-                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForGetAmmoCountToReload));
+                        codes[i].operand = AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.DecItemForGetAmmo));
                     }
-                    else if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                }
+
+                return codes.AsEnumerable();
+            }
+        }
+        
+        [HarmonyPatch(typeof(Animator3PRangedReloadState), nameof(Animator3PRangedReloadState.GetAmmoCount))]
+        static class Animator3PRangedReloadState_GetAmmoCountToReload_Patch
+        {
+            public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                Dbgl("Transpiling Animator3PRangedReloadState.GetAmmoCount");
+                var codes = new List<CodeInstruction>(instructions);
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
                     {
                         Dbgl("Adding method to get item count from storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
@@ -750,7 +699,7 @@ namespace CraftFromContainers
         }
 
 
-        private static int DecItemForGetAmmoCountToReload(Inventory inv, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
+        private static int DecItemForGetAmmo(Inventory inv, ItemValue item, int count, bool modded, IList<ItemStack> _removedItems)
         {
             int num = inv.DecItem(item, count, modded, _removedItems);
             if (num == count || !config.enableForReload || !config.modEnabled)
@@ -826,7 +775,7 @@ namespace CraftFromContainers
             Block block = blockValue.Block;
             ItemValue item = ItemClass.GetItem(action.GetUpgradeItemName(block), false);
             int totalToRemove;
-            if (!int.TryParse(block.Properties.Values[Block.PropUpgradeBlockClassItemCount], out totalToRemove))
+            if (!int.TryParse(block.Properties.GetString(Block.PropUpgradeBlockClass, Block.PropUpgradeBlockItemCount), out totalToRemove))
             {
                 Dbgl($"couldn't get total to remove");
                 return numRemoved;
@@ -925,9 +874,6 @@ namespace CraftFromContainers
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                                 {
-                                    EntityAlive entityAlive;
-                                    if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                        continue;
                                     Dbgl("added");
                                     if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
                                         currentStorageDict[loc] = lootable;
@@ -935,30 +881,6 @@ namespace CraftFromContainers
                                 }
 
                             }
-                        }
-                        else if (val is TileEntitySecureLootContainer entity2)
-                        {
-
-                            Dbgl($"got teslc {val.block.blockName} at {loc}");
-                            if (entity2.IsLocked() && !entity2.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
-                                continue;
-
-                            EntityAlive entityAlive;
-                            if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                continue;
-                            Dbgl("added");
-                            if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
-                                currentStorageDict[loc] = entity2;
-                        }
-                        else if (val is TileEntityLootContainer entity3 && entity3.GetTileEntityType() == TileEntityType.Loot && entity3.bPlayerStorage && config.allowAllContainers)
-                        {
-                            Dbgl($"got telc {val.block.blockName} at {loc}");
-                            EntityAlive entityAlive;
-                            if (GameManager.Instance.lockedTileEntities.ContainsKey(val) && (entityAlive = (EntityAlive)GameManager.Instance.World.GetEntity(GameManager.Instance.lockedTileEntities[val])) != null && !entityAlive.IsDead())
-                                continue;
-                            Dbgl("added");
-                            if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
-                                currentStorageDict[loc] = entity3;
                         }
                     }
                 }

@@ -8,12 +8,12 @@ namespace RemoteStorageAccess
     {
         public Vector2 scrollPosition;
         public ModConfig config;
-        private void Awake()
+        public void Awake()
         {
             config = RemoteStorageAccess.config;
         }
 
-        private void OnGUI()
+        public void OnGUI()
         {
 
             if (!config.modEnabled || !RemoteStorageAccess.showingList || GameManager.Instance?.World?.GetPrimaryPlayer() == null)
@@ -68,7 +68,6 @@ namespace RemoteStorageAccess
                     {
                         RemoteStorageAccess.Dbgl($"Pressed button {i}");
                         RemoteStorageAccess.currentVehicleStorage = -1;
-                        File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
                         RemoteStorageAccess.currentStorage = RemoteStorageAccess.sortedStorageList[i];
                         RemoteStorageAccess.OpenStorage();
                     }
@@ -84,7 +83,10 @@ namespace RemoteStorageAccess
                     RemoteStorageAccess.Dbgl($"Pressed edit button {i}, naming {naming}");
                     if (!naming)
                     {
-                        File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
+                        if(RemoteStorageAccess.currentStorageDict[RemoteStorageAccess.sortedStorageList[i]]?.te.TryGetSelfOrFeature<TEFeatureSignable>(out var tes) != null)
+                        {
+                            tes.SetText(RemoteStorageAccess.nameDict[coords]);
+                        }
                         RemoteStorageAccess.ReloadStorages();
                     }
                 }
@@ -108,7 +110,6 @@ namespace RemoteStorageAccess
                     }))
                 {
                     RemoteStorageAccess.Dbgl($"Pressed vehicle button {i}");
-                    File.WriteAllText(RemoteStorageAccess.nameDictPath, JsonConvert.SerializeObject(RemoteStorageAccess.nameDict));
                     RemoteStorageAccess.currentVehicleStorage = i;
                     RemoteStorageAccess.OpenVehicleStorage();
                 }

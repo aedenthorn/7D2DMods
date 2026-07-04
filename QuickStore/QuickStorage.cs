@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using Webserver.WebAPI.APIs.WorldState;
 using static AIDirectorPlayerInventory;
 using Path = System.IO.Path;
 
@@ -19,7 +20,7 @@ namespace QuickStorage
         public static QuickStorage context;
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
-        public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
+        //public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
         public static Dictionary<Vector3i, object> storageDict = new Dictionary<Vector3i, object>();
         public void InitMod(Mod modInstance)
         {
@@ -52,65 +53,76 @@ namespace QuickStorage
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TELockServer))]
-        public static class GameManager_TELockServer_Patch
-        {
-            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
-            {
-                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-                    return;
+        //[HarmonyPatch(typeof(LockManager), nameof(LockManager.LockRequestServer))]
+        //public static class LockManager_LockRequestServer_Patch
+        //{
+        //    public static void Postfix(LockManager __instance, ReadOnlySpan<ILockTarget> _targets, int _playerId, ushort _channel)
+        //    {
+        //        if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+        //            return;
 
-                TileEntity tileEntity;
-                if (_lootEntityId == -1)
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
-                }
-                else
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
-                }
-                if (tileEntity == null)
-                {
-                    return;
-                }
-                if (__instance.lockedTileEntities.ContainsKey(tileEntity))
-                {
-                    Dbgl($"Sending locked message");
+        //        List<ILockTarget> targets = _targets.ToArray().ToList();
+        //        for (int i = targets.Count - 1; i >= 0; i--)
+        //        {
+        //            LockEntry lockEntry = new LockEntry(targets[i], _channel);
 
-                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, false), true, -1, -1, -1, null, 192, false);
-                }
-            }
-        }
+        //            if (targets[i].IsSharedLock(_channel))
+        //            {
+        //                if (!__instance.sharedLocks.Contains(_playerId, lockEntry))
+        //                {
+        //                    targets.RemoveAt(i);
+        //                    continue;
+        //                }
+        //            }
+        //            if (!targets[i].IsSharedLock(_channel))
+        //            {
+        //                if (!__instance.singleLocks.TryGetByKey(_playerId, out var kvp) || !kvp.Contains(lockEntry))
+        //                {
+        //                    targets.RemoveAt(i);
+        //                    continue;
+        //                }
+        //            }
+        //        }
+        //        if (targets.Any())
+        //        {
+        //            ReadOnlySpan<ILockTarget> readOnlySpan = targets.ToArray();
+                    
+        //            Dbgl($"Sending locked message");
 
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
-        public static class GameManager_TEUnlockServer_Patch
-        {
-            public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
-            {
-                if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-                    return;
+        //            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(readOnlySpan, false), false, _playerId, -1, -1, null, 192, false);
+        //        }
+        //    }
+        //}
 
-                TileEntity tileEntity;
-                if (_lootEntityId == -1)
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_blockPos);
-                }
-                else
-                {
-                    tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
-                }
-                if (tileEntity == null)
-                {
-                    return;
-                }
-                if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
-                {
-                    Dbgl($"Sending unlocked message");
+        //[HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
+        //public static class GameManager_TEUnlockServer_Patch
+        //{
+        //    public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
+        //    {
+        //        if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+        //            return;
 
-                    SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
-                }
-            }
-        }
+        //        TileEntity tileEntity;
+        //        if (_lootEntityId == -1)
+        //        {
+        //            tileEntity = __instance.m_World.GetTileEntity(_blockPos);
+        //        }
+        //        else
+        //        {
+        //            tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
+        //        }
+        //        if (tileEntity == null)
+        //        {
+        //            return;
+        //        }
+        //        if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
+        //        {
+        //            Dbgl($"Sending unlocked message");
+
+        //            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
+        //        }
+        //    }
+        //}
 
 
         [HarmonyPatch(typeof(GameManager), "Update")]
@@ -173,72 +185,50 @@ namespace QuickStorage
             storageList.Clear();
             storageDict.Clear();
 
-            for (int i = 0; i < world.ChunkClusters.Count; i++)
+            foreach (var c in world.ChunkCache.chunks.list)
             {
-
-                var cc = world.ChunkClusters[i];
-
-                foreach(var key in cc.chunks.dict.Keys.ToArray())
+                c.EnterReadLock();
+                foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
                 {
-                    if (!cc.chunks.dict.TryGetValue(key, out var c))
+                    if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
                         continue;
-                    c.EnterReadLock();
-                    foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
-                    {
-                        if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
-                            continue;
 
-                        var loc = tileEntity.ToWorldPos();
-                        if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
-                            continue;
-                        if (lockedList.Contains(loc))
-                            continue;
-                        var entity = (tileEntity as TileEntityComposite);
-                        if (entity != null)
+                    var loc = tileEntity.ToWorldPos();
+                    if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
+                        continue;
+                    if (SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer ? LockManager.Instance.IsLockedServer(tileEntity, 0) : LockManager.Instance.IsLockedByLocalPlayer(tileEntity, 0))
+                        continue;
+                    var entity = (tileEntity as TileEntityComposite);
+                    if (entity != null)
+                    {
+                        var lootable = entity.GetFeature<ITileEntityLootable>();
+                        if (lootable != null && lootable.bPlayerStorage)
                         {
-                            var lootable = entity.GetFeature<ITileEntityLootable>();
-                            if (lootable != null && lootable.bPlayerStorage)
+                            var lockable = entity.GetFeature<ILockable>();
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                             {
-                                var lockable = entity.GetFeature<ILockable>();
-                                if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                                if (!entity.IsUserAccessing())
                                 {
-                                    if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
-                                    {
-                                        storageList.Add(loc);
-                                        storageDict.Add(loc, lootable);
-                                    }
+                                    storageList.Add(loc);
+                                    storageDict.Add(loc, lootable);
                                 }
                             }
-                            continue;
                         }
-                        var entity2 = (tileEntity as TileEntityForge);
-                        if (entity2 != null)
-                        {
-
-                            if (!entity2.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
-                            {
-                                storageList.Add(loc);
-                                storageDict.Add(loc, entity2);
-                            }
-                            continue;
-                        }
-                        var entity3 = (tileEntity as TileEntitySecureLootContainer);
-                        if (entity3 != null)
-                        {
-                            if (entity3.IsLocked() && !entity3.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
-                                continue;
-
-                            if (!entity3.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
-                            {
-                                storageList.Add(loc);
-                                storageDict.Add(loc, entity3);
-                            }
-                            continue;
-                        }
+                        continue;
                     }
-                    c.ExitReadLock();
+                    var entity2 = (tileEntity as TileEntityForge);
+                    if (entity2 != null)
+                    {
 
+                        if (!entity2.IsUserAccessing())
+                        {
+                            storageList.Add(loc);
+                            storageDict.Add(loc, entity2);
+                        }
+                        continue;
+                    }
                 }
+                c.ExitReadLock();
             }
             var pos = player.position;
             if (!storageList.Any())
@@ -383,66 +373,53 @@ namespace QuickStorage
 
         public static void PullItems(World world)
         {
+            var player = world?.GetPrimaryPlayer();
+            if (player is null)
+                return;
             Dbgl($"Pulling items");
             LoadConfig();
             storageList.Clear();
             storageDict.Clear();
 
-            for (int i = 0; i < world.ChunkClusters.Count; i++)
+            foreach (var c in world.ChunkCache.chunks.list)
             {
 
-                var cc = world.ChunkClusters[i];
 
-                foreach (var key in cc.chunks.dict.Keys.ToArray())
+                c.EnterReadLock();
+                foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
                 {
-                    if (!cc.chunks.dict.TryGetValue(key, out var c))
+                    if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
                         continue;
-                    c.EnterReadLock();
-                    foreach (var key2 in c.tileEntities.dict.Keys.ToArray())
+                    if (SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer ? LockManager.Instance.IsLockedServer(tileEntity, 0) : LockManager.Instance.IsLockedByLocalPlayer(tileEntity, 0))
+                        continue;
+                    var loc = tileEntity.ToWorldPos();
+                    if (config.range >= 0 && Vector3.Distance(player.position, loc) > config.range)
+                        continue;
+                    var entity = (tileEntity as TileEntityComposite);
+                    if (entity != null)
                     {
-                        if (!c.tileEntities.dict.TryGetValue(key2, out var tileEntity))
-                            continue;
-                        var loc = tileEntity.ToWorldPos();
-                        if (lockedList.Contains(loc))
-                            continue;
-                        var entity = (tileEntity as TileEntityComposite);
-                        if (entity != null)
+                        var lootable = entity.GetFeature<ITileEntityLootable>();
+                        if (lootable != null && lootable.bPlayerStorage)
                         {
-                            var lootable = entity.GetFeature<ITileEntityLootable>();
-                            if (lootable != null && lootable.bPlayerStorage)
+                            var lockable = entity.GetFeature<ILockable>();
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                             {
-                                var lockable = entity.GetFeature<ILockable>();
-                                if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+
+
+                                if (!entity.IsUserAccessing())
                                 {
-
-
-                                    if (!entity.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
-                                    {
-                                        storageList.Add(loc);
-                                        storageDict.Add(loc, lootable);
-                                    }
+                                    storageList.Add(loc);
+                                    storageDict.Add(loc, lootable);
                                 }
                             }
-                            continue;
                         }
-
-                        var entity3 = (tileEntity as TileEntitySecureLootContainer);
-                        if (entity3 != null)
-                        {
-                            if (entity3.IsLocked() && !entity3.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
-                                continue;
-
-                            if (!entity3.IsUserAccessing() && !GameManager.Instance.lockedTileEntities.ContainsKey(tileEntity))
-                            {
-                                storageList.Add(loc);
-                                storageDict.Add(loc, entity3);
-                            }
-                            continue;
-                        }
+                        continue;
                     }
-                    c.ExitReadLock();
 
                 }
+                c.ExitReadLock();
+
+                
             }
             var pos = world.GetPrimaryPlayer().position;
             storageList.Sort(delegate (Vector3i a, Vector3i b) {
