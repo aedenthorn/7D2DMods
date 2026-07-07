@@ -8,6 +8,7 @@ namespace PickLockedDoors
     {
         public bool modEnabled = true;
         public bool isDebug = true;
+        public bool alwaysShowMenu = true;
         public string lockPickItem = "resourceLockPick";
         public float lockPickTime = 15;
         public float lockPickBreakChance = 0.75f;
