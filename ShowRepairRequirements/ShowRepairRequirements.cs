@@ -32,6 +32,7 @@ namespace ShowRepairRequirements
                 repairTooltip = "";
                 if (!config.modEnabled || !(__instance.itemActionEntry is ItemActionEntryRepair) || (__instance.itemActionEntry as ItemActionEntryRepair).state == ItemActionEntryRepair.StateTypes.RecipeLocked)
                     return;
+
                 if (__instance.xui.ToolTipWindow != null)
                 {
                     if (_isOver && __instance.ItemActionEntry.ItemController is XUiC_ItemStack)
@@ -48,6 +49,7 @@ namespace ShowRepairRequirements
                                 int num = Convert.ToInt32(Math.Ceiling((double)(Mathf.CeilToInt(itemValue.UseTimes) / (float)itemClass.RepairAmount.Value)));
                                 int has = __instance.xui.PlayerInventory.GetItemCount(new ItemValue(itemClass.Id, false));
                                 tooltip += $"{Localization.Get(itemClass.Name, false)} {has}/{num}\n";
+                                //Dbgl(tooltip);
                             }
                         }
                         repairTooltip = tooltip;
@@ -66,7 +68,7 @@ namespace ShowRepairRequirements
             {
                 if (!config.modEnabled || string.IsNullOrEmpty(repairTooltip) || __instance.xui.ToolTipWindow == null)
                     return;
-                //Dbgl($"{__instance.GetType()} {__instance.ID}");
+                //Dbgl($"{__instance.GetType()} {__instance.ID} {repairTooltip}");
                 __instance.xui.ToolTipWindow.ToolTip = repairTooltip;
             }
         }
@@ -147,6 +149,8 @@ namespace ShowRepairRequirements
                 {
                     if (__instance.Children[i].ViewComponent is XUiV_Label)
                     {
+                        //Dbgl($"resizing");
+
                         __instance.Children[i].ViewComponent.Size = new Vector2i(__instance.Children[i].ViewComponent.Size.x, 60);
                         break;
                     }

@@ -23,16 +23,16 @@ namespace CraftFromContainers
 
         public void InitMod(Mod modInstance)
         {
-            LoadConfig();
-
             context = this;
             mod = modInstance;
+            LoadConfig();
+
             Harmony harmony = new Harmony(GetType().ToString());
             harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
         public void LoadConfig()
         {
-            var path = Path.Combine(AedenthornUtils.GetAssetPath(this, true), "config.json");
+            var path = Path.Combine(AedenthornUtils.GetAssetPath(mod.Path, mod.Name, true), "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();
@@ -42,6 +42,7 @@ namespace CraftFromContainers
                 config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
             }
             File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+            Dbgl(path);
         }
         public static void Dbgl(object str, bool prefix = true)
         {

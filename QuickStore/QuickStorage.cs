@@ -20,7 +20,7 @@ namespace QuickStorage
         public static QuickStorage context;
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
-        //public static HashSet<Vector3i> lockedList = new HashSet<Vector3i>();
+        public static HashSet<ILockTarget> lockedList = new HashSet<ILockTarget>();
         public static Dictionary<Vector3i, object> storageDict = new Dictionary<Vector3i, object>();
         public void InitMod(Mod modInstance)
         {
@@ -53,76 +53,17 @@ namespace QuickStorage
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
-        //[HarmonyPatch(typeof(LockManager), nameof(LockManager.LockRequestServer))]
-        //public static class LockManager_LockRequestServer_Patch
-        //{
-        //    public static void Postfix(LockManager __instance, ReadOnlySpan<ILockTarget> _targets, int _playerId, ushort _channel)
-        //    {
-        //        if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-        //            return;
+        [HarmonyPatch(typeof(ConnectionManager), nameof(ConnectionManager.SendPackage), new Type[] { typeof(NetPackage),typeof(bool),typeof(int),typeof(int),typeof(int),typeof(Vector3?),typeof(int),typeof(bool) })]
+        public static class ConnectionManager_SendPackage_Patch
+        {
+            public static void Postfix(ConnectionManager __instance, NetPackage _package, bool _onlyClientsAttachedToAnEntity)
+            {
+                if (!config.modEnabled || !__instance.IsServer || !(_package is NetPackageLockResponse response) || !response.success)
+                    return;
 
-        //        List<ILockTarget> targets = _targets.ToArray().ToList();
-        //        for (int i = targets.Count - 1; i >= 0; i--)
-        //        {
-        //            LockEntry lockEntry = new LockEntry(targets[i], _channel);
-
-        //            if (targets[i].IsSharedLock(_channel))
-        //            {
-        //                if (!__instance.sharedLocks.Contains(_playerId, lockEntry))
-        //                {
-        //                    targets.RemoveAt(i);
-        //                    continue;
-        //                }
-        //            }
-        //            if (!targets[i].IsSharedLock(_channel))
-        //            {
-        //                if (!__instance.singleLocks.TryGetByKey(_playerId, out var kvp) || !kvp.Contains(lockEntry))
-        //                {
-        //                    targets.RemoveAt(i);
-        //                    continue;
-        //                }
-        //            }
-        //        }
-        //        if (targets.Any())
-        //        {
-        //            ReadOnlySpan<ILockTarget> readOnlySpan = targets.ToArray();
-                    
-        //            Dbgl($"Sending locked message");
-
-        //            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(readOnlySpan, false), false, _playerId, -1, -1, null, 192, false);
-        //        }
-        //    }
-        //}
-
-        //[HarmonyPatch(typeof(GameManager), nameof(GameManager.TEUnlockServer))]
-        //public static class GameManager_TEUnlockServer_Patch
-        //{
-        //    public static void Postfix(GameManager __instance, int _clrIdx, Vector3i _blockPos, int _lootEntityId)
-        //    {
-        //        if (!config.modEnabled || !SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
-        //            return;
-
-        //        TileEntity tileEntity;
-        //        if (_lootEntityId == -1)
-        //        {
-        //            tileEntity = __instance.m_World.GetTileEntity(_blockPos);
-        //        }
-        //        else
-        //        {
-        //            tileEntity = __instance.m_World.GetTileEntity(_lootEntityId);
-        //        }
-        //        if (tileEntity == null)
-        //        {
-        //            return;
-        //        }
-        //        if (!__instance.lockedTileEntities.ContainsKey(tileEntity))
-        //        {
-        //            Dbgl($"Sending unlocked message");
-
-        //            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(_blockPos, true), true, -1, -1, -1, null, 192, false);
-        //        }
-        //    }
-        //}
+                SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(response.targets, !response.locking), false, -1, -1, -1, null, 192, false);
+            }
+        }
 
 
         [HarmonyPatch(typeof(GameManager), "Update")]
@@ -202,7 +143,7 @@ namespace QuickStorage
                     if (entity != null)
                     {
                         var lootable = entity.GetFeature<ITileEntityLootable>();
-                        if (lootable != null && lootable.bPlayerStorage)
+                        if (lootable != null && lootable.bPlayerStorage && !lockedList.Contains(lootable))
                         {
                             var lockable = entity.GetFeature<ILockable>();
                             if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))

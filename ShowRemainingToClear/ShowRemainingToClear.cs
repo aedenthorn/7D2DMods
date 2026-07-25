@@ -1,13 +1,9 @@
 ﻿using HarmonyLib;
 using Newtonsoft.Json;
-using Platform;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Threading;
 using UnityEngine;
 
 namespace ShowRemainingToClear

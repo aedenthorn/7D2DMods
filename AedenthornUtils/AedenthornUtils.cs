@@ -51,13 +51,9 @@ public class AedenthornUtils
             list[n] = value;
         }
     }
-    public static string GetAssetPath(object obj, bool create = false)
+    public static string GetAssetPath(string modFolder, string name, bool create = false)
     {
-        return GetAssetPath(obj.GetType().Namespace, create);
-    }
-    public static string GetAssetPath(string name, bool create = false)
-    {
-        string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), name);
+        string path = Path.Combine(modFolder, name);
         if (create && !Directory.Exists(path))
         {
             Directory.CreateDirectory(path);
