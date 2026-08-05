@@ -36,12 +36,12 @@ namespace CraftFromContainers
             if (!File.Exists(path))
             {
                 config = new ModConfig();
+                File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
             else
             {
                 config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
             }
-            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
             Dbgl(path);
         }
         public static void Dbgl(object str, bool prefix = true)
