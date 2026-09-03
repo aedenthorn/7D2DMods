@@ -375,7 +375,7 @@ namespace UnrestrictedTraderAccess
                                     if (!block.ischild)
                                     {
                                         Vector3i vector3i = chunk.ToWorldPos(list[m]);
-                                        if (area.ProtectBounds.Contains(vector3i))
+                                        if (area.AreaBounds.Contains(vector3i))
                                         {
                                             Block block2 = block.Block;
                                             if (block2.HasTag(BlockTags.Door) && block2 is BlockCompositeTileEntity)
