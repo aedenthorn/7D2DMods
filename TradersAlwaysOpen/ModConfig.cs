@@ -12,6 +12,7 @@ namespace UnrestrictedTraderAccess
         public bool removeDamageProtection = false;
         public bool neverAllowNonPlayerDamage = false;
         public bool alwaysAllowPlayerDamage = true;
+        public bool alwaysAllowRepair = true;
         public bool removeWallVolumes = true;
         public string damageProtectionDisabledText = "Trader damage protection disabled";
         public string damageProtectionEnabledText = "Trader damage protection enabled";

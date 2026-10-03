@@ -45,7 +45,7 @@ namespace UnrestrictedTraderAccess
             );
             harmony.Patch(
                 original: AccessTools.Method(typeof(ItemActionRepair), nameof(ItemActionRepair.ExecuteAction)),
-                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.DamageMethodTranspiler)) 
+                transpiler: new HarmonyMethod(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.RepairMethodTranspiler)) 
             );
             harmony.Patch(
                 original: AccessTools.Method(typeof(World), nameof(World.CanPickupBlockAt)),
@@ -142,11 +142,37 @@ namespace UnrestrictedTraderAccess
 
             return codes.AsEnumerable();
         }
+        public static IEnumerable<CodeInstruction> RepairMethodTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            if (!config.modEnabled)
+                return codes;
+            Dbgl("Transpiling repair method");
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if ((codes[i].opcode == OpCodes.Callvirt || codes[i].opcode == OpCodes.Call) && codes[i].operand is MethodInfo && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(World), nameof(World.IsWithinTraderArea), new Type[] { typeof(Vector3i) }))
+                {
+                    Dbgl("Adding method to override repair protection");
+                    codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(UnrestrictedTraderAccess), nameof(UnrestrictedTraderAccess.RepairMethodOverride))));
+                    break;
+                }
+            }
+
+            return codes.AsEnumerable();
+        }
 
         public static bool DamageMethodOverride(bool result)
         {
 
             if (!config.modEnabled || !result || !config.removeDamageProtection)
+                return result;
+            return false;
+        }
+
+        public static bool RepairMethodOverride(bool result)
+        {
+
+            if (!config.modEnabled || !result || (!config.alwaysAllowRepair && !config.removeDamageProtection))
                 return result;
             return false;
         }
@@ -205,7 +231,7 @@ namespace UnrestrictedTraderAccess
         }
 
         [HarmonyPatch(typeof(ItemActionAttack), nameof(ItemActionAttack.Hit))]
-        static class ItemActionAttack_Hit_Patch
+        public static class ItemActionAttack_Hit_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
@@ -268,7 +294,7 @@ namespace UnrestrictedTraderAccess
 
         [HarmonyPatch(typeof(TraderInfo), nameof(TraderInfo.IsWarningTime))]
         [HarmonyPatch(MethodType.Getter)]
-        static class TraderInfo_IsWarningTime_Patch
+        public static class TraderInfo_IsWarningTime_Patch
         {
 
             static bool Prefix(ref bool __result)
@@ -282,7 +308,7 @@ namespace UnrestrictedTraderAccess
 
         [HarmonyPatch(typeof(TraderInfo), nameof(TraderInfo.IsOpen))]
         [HarmonyPatch(MethodType.Getter)]
-        static class TraderInfo_IsOpen_Patch
+        public static class TraderInfo_IsOpen_Patch
         {
 
             static bool Prefix(ref bool __result)
@@ -294,9 +320,24 @@ namespace UnrestrictedTraderAccess
                 return false;
             }
         }
+
+        [HarmonyPatch(typeof(TraderInfo), nameof(TraderInfo.IsTraderActivitiesOpen))]
+        [HarmonyPatch(MethodType.Getter)]
+        public static class TraderInfo_IsTraderActivitiesOpen_Patch
+        {
+
+            public static bool Prefix(ref bool __result)
+            {
+                if (!config.modEnabled)
+                    return true;
+
+                __result = true;
+                return false;
+            }
+        }
         
         [HarmonyPatch(typeof(TraderArea), nameof(TraderArea.SetClosed))]
-        static class TraderArea_SetClosed_Patch
+        public static class TraderArea_SetClosed_Patch
         {
 
             static void Prefix(TraderArea __instance, ref bool _bClosed)
@@ -308,7 +349,7 @@ namespace UnrestrictedTraderAccess
         }
         
         [HarmonyPatch(typeof(TraderArea), nameof(TraderArea.IsWithinTeleportArea))]
-        static class TraderArea_IsWithinTeleportArea_Patch
+        public static class TraderArea_IsWithinTeleportArea_Patch
         {
 
             static bool Prefix(TraderArea __instance, ref bool __result)
@@ -322,7 +363,7 @@ namespace UnrestrictedTraderAccess
             }
         }
         [HarmonyPatch(typeof(EntityAlive), nameof(EntityAlive.checkForTeleportOutOfTraderArea))]
-        static class EntityAlive_checkForTeleportOutOfTraderArea_Patch
+        public static class EntityAlive_checkForTeleportOutOfTraderArea_Patch
         {
 
             static bool Prefix()
@@ -335,7 +376,7 @@ namespace UnrestrictedTraderAccess
         }
 
         [HarmonyPatch(typeof(World), nameof(World.SetupTraders))]
-        static class World_SetupTraders_Patch
+        public static class World_SetupTraders_Patch
         {
 
             static void Prefix(World __instance)
@@ -419,7 +460,7 @@ namespace UnrestrictedTraderAccess
         }
 
         [HarmonyPatch(typeof(World), nameof(World.CanPlaceLandProtectionBlockAt))]
-        static class World_CanPlaceLandProtectionBlockAt_Patch
+        public static class World_CanPlaceLandProtectionBlockAt_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
@@ -452,7 +493,7 @@ namespace UnrestrictedTraderAccess
 
 
         [HarmonyPatch(typeof(World), nameof(World.IsWithinTraderPlacingProtection), new Type[] { typeof(Vector3i) })]
-        static class World_IsWithinTraderPlacingProtection_Patch1
+        public static class World_IsWithinTraderPlacingProtection_Patch1
         {
 
             static bool Prefix(ref bool __result)
@@ -464,7 +505,7 @@ namespace UnrestrictedTraderAccess
             }
         }
         [HarmonyPatch(typeof(World), nameof(World.IsWithinTraderPlacingProtection), new Type[] { typeof(Bounds) })]
-        static class World_IsWithinTraderPlacingProtection_Patch2
+        public static class World_IsWithinTraderPlacingProtection_Patch2
         {
 
             static bool Prefix(ref bool __result)
@@ -477,7 +518,7 @@ namespace UnrestrictedTraderAccess
         }
         
         [HarmonyPatch(typeof(XUiC_Location), nameof(XUiC_Location.GetBindingValueInternal))]
-        static class XUiC_Location_GetBindingValue_Patch
+        public static class XUiC_Location_GetBindingValue_Patch
         {
 
             static void Postfix(XUiC_Location __instance, ref string _value, string _bindingName)
@@ -488,7 +529,7 @@ namespace UnrestrictedTraderAccess
             }
         }
         [HarmonyPatch(typeof(Chunk), nameof(Chunk.GetWallVolumes))]
-        static class Chunk_GetWallVolumes_Patch
+        public static class Chunk_GetWallVolumes_Patch
         {
 
             static void Postfix(Chunk __instance, ref List<int> __result)
