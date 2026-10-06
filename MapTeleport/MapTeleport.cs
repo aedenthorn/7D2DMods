@@ -100,7 +100,7 @@ namespace MapTeleport
 
         public void LoadConfig()
         {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
+            string path = Path.Combine(mod.Path, "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();

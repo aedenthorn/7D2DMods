@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
-using static Hand;
 using Path = System.IO.Path;
 
 namespace ToggleHoldingItem
@@ -27,6 +26,39 @@ namespace ToggleHoldingItem
 
         }
 
+        public void LoadConfig()
+        {
+            string path = Path.Combine(mod.Path, "config.json");
+            if (!File.Exists(path))
+            {
+                config = new ModConfig();
+            }
+            else
+            {
+                config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
+            }
+            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+        }
+
+        public static void Dbgl(object str, bool prefix = true)
+        {
+            if (config.isDebug)
+                Debug.Log((prefix ? mod.Name + " " : "") + str);
+        }
+
+        public static void ToggleItem()
+        {
+            var inv = GameManager.Instance.World.GetPrimaryPlayer().inventory;
+            hidingItem = !hidingItem;
+            if (hidingItem)
+            {
+                inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(false);
+            }
+            else
+            {
+                inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(true);
+            }
+        }
         [HarmonyPatch(typeof(PlayerMoveController), nameof(PlayerMoveController.Update))]
         static class PlayerMoveController_Update_Patch
         {
@@ -75,30 +107,17 @@ namespace ToggleHoldingItem
 
             }
 
-            private static void ToggleItem()
-            {
-                var inv = GameManager.Instance.World.GetPrimaryPlayer().inventory;
-                hidingItem = !hidingItem;
-                if (hidingItem)
-                {
-                    inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(false);
-                }
-                else
-                {
-                    inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(true);
-                }
-            }
+
         }
-        [HarmonyPatch(typeof(EntityPlayerLocal), nameof(EntityPlayerLocal.OnHoldingItemChanged))]
-        public static class EntityPlayerLocal_OnHoldingItemChanged_Patch
+        [HarmonyPatch(typeof(Hand), nameof(Hand.Reconcile))]
+        public static class Hand_Reconcile_Patch
         {
 
-            public static void Prefix(EntityPlayerLocal __instance)
+            public static void Prefix()
             {
                 if (hidingItem)
                 {
-                    __instance.inventory.Hand.Held.heldModel.Instance.SetActive(true);
-                    hidingItem = false;
+                    ToggleItem();
                 }
             }
         }
@@ -135,26 +154,5 @@ namespace ToggleHoldingItem
                 }
             }
         }
-
-        public void LoadConfig()
-        {
-            var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.json");
-            if (!File.Exists(path))
-            {
-                config = new ModConfig();
-            }
-            else
-            {
-                config = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(path));
-            }
-            File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
-        }
-
-        public static void Dbgl(object str, bool prefix = true)
-        {
-            if(config.isDebug)
-                Debug.Log((prefix ? mod.Name + " " : "") + str);
-        }
-
     }
 }

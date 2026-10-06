@@ -32,7 +32,7 @@ namespace CraftFromContainers
         }
         public void LoadConfig()
         {
-            var path = Path.Combine(AedenthornUtils.GetAssetPath(mod.Path, mod.Name, true), "config.json");
+            string path = Path.Combine(mod.Path, "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();
