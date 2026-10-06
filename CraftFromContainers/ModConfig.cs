@@ -1,8 +1,4 @@
-﻿using System.Drawing;
-using System.Numerics;
-using UnityEngine;
-
-namespace CraftFromContainers
+﻿namespace CraftFromContainers
 {
     public class ModConfig
     {

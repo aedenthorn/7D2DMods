@@ -9,7 +9,7 @@ using System.Reflection;
 using UnityEngine;
 using Path = System.IO.Path;
 
-namespace CustomPosters
+namespace TransferToForge
 {
     public class TransferMods : IModApi
     {

@@ -29,7 +29,7 @@ namespace RemoteStorageAccess
             {
                 config.windowPositionX = (int)RemoteStorageAccess.windowRect.x;
                 config.windowPositionY = (int)RemoteStorageAccess.windowRect.y;
-                var path = Path.Combine(AedenthornUtils.GetAssetPath(this, true), "config.json");
+                var path = Path.Combine(AedenthornUtils.GetAssetPath(RemoteStorageAccess.mod.Path, RemoteStorageAccess.mod.Name, true), "config.json");
                 File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
             }
         }

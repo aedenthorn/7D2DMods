@@ -10,7 +10,7 @@ using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 using Path = System.IO.Path;
 
-namespace CustomPosters
+namespace TransferToForge
 {
     public class CustomPosters : IModApi
     {

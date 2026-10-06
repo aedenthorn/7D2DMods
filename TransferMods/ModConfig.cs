@@ -1,5 +1,5 @@
 ﻿
-namespace CustomPosters
+namespace TransferToForge
 {
     public class ModConfig
     {

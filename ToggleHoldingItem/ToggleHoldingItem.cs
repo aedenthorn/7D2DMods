@@ -15,7 +15,6 @@ namespace AdvancedCompassMarkers
         public static ToggleHoldingItem context;
         public static Mod mod;
         public static bool hidingItem;
-        private static Transform holdingModel;
         private static int holdingModelIndex;
         public void InitMod(Mod modInstance)
         {
@@ -51,9 +50,17 @@ namespace AdvancedCompassMarkers
                             newSlot = -1;
                         }
                     }
-                    else if (InputUtils.ShiftKeyPressed && __instance.entityPlayerLocal.inventory.PUBLIC_SLOTS > __instance.entityPlayerLocal.inventory.SHIFT_KEY_SLOT_OFFSET)
+                    else if (InputUtils.AltKeyPressed)
                     {
-                        newSlot += __instance.entityPlayerLocal.inventory.SHIFT_KEY_SLOT_OFFSET;
+                        newSlot = -1;
+                    }
+                    else
+                    {
+                        XUiC_Toolbelt childByType = __instance.playerUI.xui.GetChildByType<XUiC_Toolbelt>();
+                        if (childByType != null)
+                        {
+                            newSlot = childByType.ResolveShortcutSlot(newSlot, InputUtils.ShiftKeyPressed);
+                        }
                     }
                 }
                 if (__instance.inventoryScrollPressed && __instance.inventoryScrollIdxToSelect != -1)
@@ -70,19 +77,18 @@ namespace AdvancedCompassMarkers
 
             private static void ToggleItem()
             {
+                var inv = GameManager.Instance.World.GetPrimaryPlayer().inventory;
                 hidingItem = !hidingItem;
-                int idx = GameManager.Instance.World.GetPrimaryPlayer().inventory.m_HoldingItemIdx;
+                int idx = inv.holdingItemIdx;
                 if (hidingItem)
                 {
                     holdingModelIndex = idx;
-                    holdingModel = GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx];
-                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = null;
+                    inv.Hand.Held.heldModel.Instance.SetActive(false);
                 }
                 else
                 {
-                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[idx] = holdingModel;
+                    inv.Hand.Held.heldModel.Instance.SetActive(true);
                 }
-                GameManager.Instance.World.GetPrimaryPlayer().inventory.updateHoldingItem();
             }
         }
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemItemValue))]
@@ -94,7 +100,7 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
-                __result = __instance.bareHandItemValue;
+                __result = __instance.Hand.BareHandItemValue;
                 return false;
             }
         }
@@ -107,7 +113,7 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
-                __result = __instance.bareHandItem;
+                __result = __instance.Hand.BareHandItem;
                 for (int i = 0; i < __result.Actions.Length; i++)
                 {
                     if (__result.Actions[i] is ItemActionDynamicMelee)
@@ -127,7 +133,7 @@ namespace AdvancedCompassMarkers
             {
                 if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
                     return true;
-                __result = __instance.bareHandItemInventoryData;
+                __result = __instance.Hand.bareHandData;
                 for (int i = 0; i < __result.item.Actions.Length; i++)
                 {
                     if (__result.item.Actions[i] is ItemActionDynamicMelee)
@@ -138,31 +144,7 @@ namespace AdvancedCompassMarkers
                 return false;
             }
         }
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.setHoldingItemTransform))]
-        public static class Inventory_setHoldingItemTransform_Patch
-        {
-
-            public static void Prefix(Inventory __instance, ref Transform _t)
-            {
-                if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
-                    return;
-                _t = null;
-            }
-        }
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.HoldingItemHasChanged))]
-        public static class Inventory_HoldingItemHasChanged_Patch
-        {
-
-            public static void Prefix(Inventory __instance)
-            {
-                if(__instance.entity is EntityPlayerLocal && hidingItem)
-                {
-                    GameManager.Instance.World.GetPrimaryPlayer().inventory.models[holdingModelIndex] = holdingModel;
-                    holdingModel = null;
-                    hidingItem = false;
-                }
-            }
-        }
+        
         [HarmonyPatch(typeof(ItemActionEat), nameof(ItemActionEat.ExecuteAction))]
         public static class ItemActionEat_ExecuteAction_Patch
         {

@@ -54,7 +54,7 @@ namespace RemoteStorageAccess
 
         public void LoadConfig()
         {
-            var path = Path.Combine(AedenthornUtils.GetAssetPath(this, true), "config.json");
+            var path = Path.Combine(AedenthornUtils.GetAssetPath(mod.Path, mod.Name, true), "config.json");
             if (!File.Exists(path))
             {
                 config = new ModConfig();
@@ -84,10 +84,9 @@ namespace RemoteStorageAccess
         [HarmonyPatch(typeof(LootManager), nameof(LootManager.LootContainerOpened))]
         public static class LootManager_LootContainerOpened_Patch
         {
-            public static void Postfix(ITileEntityLootable _tileEntity)
+            public static void Postfix(TEFeatureStorage _tileEntity)
             {
-                ITileEntityLootable selfOrFeature = _tileEntity.GetSelfOrFeature<ITileEntityLootable>();
-                if (selfOrFeature == null || !config.modEnabled || !selfOrFeature.bPlayerStorage)
+                if (!config.modEnabled || !_tileEntity.ItemGrid.PlayerOwned)
                 {
                     return;
                 }
@@ -422,7 +421,7 @@ namespace RemoteStorageAccess
                 var ui = LocalPlayerUI.GetUIForPlayer(player);
                 lastCursorPos = MouseLib.GetGlobalMousePosition();
                 ui.windowManager.CloseAllOpenModalWindows(null, false);
-                LockManager.Instance.LockRequestLocal(tef, null, 0);
+                LockManager.Instance.LockRequestLocal(tef, 0);
             }
         }
         public static void OpenVehicleStorage()
@@ -478,13 +477,12 @@ namespace RemoteStorageAccess
                     var entity = (kvp.Value as TileEntityComposite);
                     if (entity != null)
                     {
-                        var lootable = entity.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
-                        if (lootable != null && lootable.bPlayerStorage)
+                        var lootable = entity.GetFeature<TEFeatureStorage>();
+                        if (lootable != null && lootable.ItemGrid.PlayerOwned)
                         {
                             var lockable = entity.GetFeature<ILockable>();
                             if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                             {
-                                lootable.bWasTouched = lootable.bTouched;
                                 knownStorageDict[loc] = new StorageData() { chunk = c, te = lootable };
                                 if (config.range <= 0 || Vector3.Distance(pos, loc) < config.range)
                                     currentStorageDict[loc] = new StorageData() { chunk = c, te = lootable };

@@ -61,16 +61,16 @@ namespace CraftFromContainers
 
             }
         }
-        [HarmonyPatch(typeof(ItemActionEntryCraft), nameof(ItemActionEntryCraft.OnActivated))]
-        static class ItemActionEntryCraft_OnActivated_Patch
+        [HarmonyPatch(typeof(ItemActionEntryCraft), nameof(ItemActionEntryCraft.hasItems))]
+        static class ItemActionEntryCraft_hasItems_Patch
         {
             public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                Dbgl("Transpiling ItemActionEntryCraft.OnActivated");
+                Dbgl("Transpiling ItemActionEntryCraft.hasItems");
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
+                    if (codes[i].operand is MethodInfo mi && mi == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
                     {
                         Dbgl("Adding method to add items from all storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacksList))));
@@ -90,7 +90,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Call && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
+                    if (codes[i].operand is MethodInfo mi && mi == AccessTools.Method(typeof(XUiM_PlayerInventory), nameof(XUiM_PlayerInventory.GetAllItemStacks)))
                     {
                         Dbgl("Adding method to add items from all storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.GetAllStorageStacksList))));
@@ -136,7 +136,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
+                    if (codes[i].operand is MethodInfo mi && mi == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
                     {
                         var ci = codes[i + 3];
                         var ciNew = new CodeInstruction(OpCodes.Ldarg_1);
@@ -163,7 +163,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
+                    if (codes[i].operand is MethodInfo mi && mi == AccessTools.Method(typeof(Bag), nameof(Bag.DecItem)))
                     {
                         Dbgl("Adding method to remove from storages");
                         codes[i].opcode = OpCodes.Call;
@@ -185,7 +185,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                if (codes[i].operand is MethodInfo mi && mi == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool) }))
                     {
                         Dbgl("Adding method to get item count from storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
@@ -206,7 +206,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
+                    if (codes[i].operand  is MethodInfo mi && mi == AccessTools.Method(typeof(Inventory), nameof(Inventory.DecItem)))
                     {
                         Dbgl("Adding method to remove from storages");
                         codes[i].opcode = OpCodes.Call;
@@ -227,7 +227,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
+                    if (codes[i].operand  is MethodInfo mi && mi == AccessTools.Method(typeof(Inventory), nameof(Inventory.GetItemCount), new Type[] { typeof(ItemValue), typeof(bool), typeof(int), typeof(int), typeof(bool)  }))
                     {
                         Dbgl("Adding method to get item count from storages");
                         codes.Insert(i + 1, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(CraftFromContainers), nameof(CraftFromContainers.AddAllStoragesCountItemValue))));
@@ -248,7 +248,7 @@ namespace CraftFromContainers
                 var codes = new List<CodeInstruction>(instructions);
                 for (int i = 0; i < codes.Count; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount), new Type[] { typeof(ItemValue),typeof(int), typeof(int), typeof(bool)  }))
+                    if (codes[i].operand  is MethodInfo mi && mi == AccessTools.Method(typeof(Bag), nameof(Bag.GetItemCount), new Type[] { typeof(ItemValue),typeof(int), typeof(int), typeof(bool)  }))
                     {
                         Dbgl("Adding method to get item count from storages");
                         codes[i].opcode = OpCodes.Call;
@@ -518,16 +518,16 @@ namespace CraftFromContainers
                 return list;
             foreach (var kvp in currentStorageDict)
             {
-                if (kvp.Value is ITileEntityLootable tel)
+                if (kvp.Value is TEFeatureStorage tel)
                 {
-                    ItemStack[] items = tel.items;
+                    ItemStack[] items = tel.ItemGrid.items;
                     if (items == null)
                         continue;
                     list.AddRange(items);
                 }
                 else if (kvp.Value is Bag bag)
                 {
-                    var items = bag.GetSlots();
+                    var items = bag.ItemGrid.items;
                     if (items != null)
                         list.AddRange(items);
                 }
@@ -547,9 +547,9 @@ namespace CraftFromContainers
                 return count;
             foreach (var kvp in currentStorageDict)
             {
-                if (kvp.Value is ITileEntityLootable tel)
+                if (kvp.Value is TEFeatureStorage tel)
                 {
-                    ItemStack[] items = tel.items;
+                    ItemStack[] items = tel.ItemGrid.items;
                     if (items == null)
                         continue;
                     for (int j = 0; j < items.Length; j++)
@@ -562,7 +562,7 @@ namespace CraftFromContainers
                 }
                 else if (kvp.Value is Bag bag)
                 {
-                    ItemStack[] items = bag.GetSlots();
+                    ItemStack[] items = bag.ItemGrid.items;
                     if (items == null)
                         continue;
                     for (int j = 0; j < items.Length; j++)
@@ -718,9 +718,9 @@ namespace CraftFromContainers
             int numLeft = count;
             foreach (var kvp in currentStorageDict)
             {
-                if (kvp.Value is ITileEntityLootable tel)
+                if (kvp.Value is TEFeatureStorage tel)
                 {
-                    ItemStack[] items = tel.items;
+                    ItemStack[] items = tel.ItemGrid.items;
                     if (items == null)
                         continue;
                     for (int j = 0; j < items.Length; j++)
@@ -744,7 +744,7 @@ namespace CraftFromContainers
                 }
                 else if (kvp.Value is Bag bag)
                 {
-                    ItemStack[] items = bag.GetSlots();
+                    ItemStack[] items = bag.ItemGrid.items;
                     if (items == null)
                         continue;
                     for (int j = 0; j < items.Length; j++)
@@ -868,14 +868,14 @@ namespace CraftFromContainers
                             continue;
                         if (val is TileEntityComposite entity)
                         {
-                            Dbgl($"got tec {val.block.blockName} at {loc}");
+                            //Dbgl($"got tec {val.block.blockName} at {loc}");
 
-                            if (entity.GetFeature<ITileEntityLootable>() is TEFeatureStorage lootable && lootable.bPlayerStorage)
+                            if (entity.GetFeature<TEFeatureStorage>() is TEFeatureStorage lootable && lootable.ItemGrid.PlayerOwned)
                             {
                                 var lockable = entity.GetFeature<ILockable>();
                                 if (lockable == null || !lockable.IsLocked() || (config.allowLockedContainers && lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier)))
                                 {
-                                    Dbgl("added");
+                                    //Dbgl("added");
                                     if (config.range <= 0 || Vector3.Distance(pos.Value, loc) < config.range)
                                         currentStorageDict[loc] = lootable;
 

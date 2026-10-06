@@ -133,20 +133,9 @@ namespace PickupBlocks
             if (entity?.GetType().Equals(typeof(TileEntityComposite)) == true)
             {
                 var telc = entity as TileEntityComposite;
-                 if (telc != null && telc.GetFeature<TEFeatureStorage>() is TEFeatureStorage tefs && (!tefs.IsEmpty() || !tefs.bTouched))
+                 if (telc != null && telc.GetFeature<TEFeatureStorage>() is TEFeatureStorage tefs && (!tefs.IsEmpty() || !tefs.ItemGrid.Touched))
                 {
-                    Dbgl($"{block.blockName} is telc, blocked because empty: {tefs.IsEmpty()}, touched {tefs.bTouched}");
-                    GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
-                    return;
-                }
-            }
-            if(entity is TileEntityComposite tec)
-            {
-                Dbgl($"is tec");
-                var lootable = tec.GetFeature<ITileEntityLootable>() as TEFeatureStorage;
-                if(lootable != null && (!lootable.bTouched || !lootable.IsEmpty()))
-                {
-                    Dbgl($"storage blocked because empty: {lootable.IsEmpty()}, touched: {lootable.bTouched}");
+                    Dbgl($"{block.blockName} is telc, blocked because empty: {tefs.IsEmpty()}, touched {tefs.ItemGrid.Touched}");
                     GameManager.ShowTooltip(_player as EntityPlayerLocal, config.EmptyFirstMessage, string.Empty, "ui_denied", null);
                     return;
                 }

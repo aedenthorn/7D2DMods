@@ -95,7 +95,7 @@ namespace PickLockedDoors
             }
         }
 
-        [HarmonyPatch(typeof(TileEntityComposite), nameof(TileEntityComposite.read), new Type[] { typeof(PooledBinaryReader), typeof(TileEntity.StreamModeRead), typeof(int[]) })]
+        [HarmonyPatch(typeof(TileEntityComposite), nameof(TileEntityComposite.read), new Type[] { typeof(PooledBinaryReader), typeof(StreamModeRead), typeof(int[]) })]
         static class TileEntityComposite_read_Patch
         {
 

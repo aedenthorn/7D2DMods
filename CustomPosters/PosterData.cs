@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace CustomPosters
+namespace TransferToForge
 {
     public class PosterData
     {

@@ -20,8 +20,9 @@ namespace QuickStorage
         public static QuickStorage context;
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
-        public static HashSet<ILockTarget> lockedList = new HashSet<ILockTarget>();
         public static Dictionary<Vector3i, object> storageDict = new Dictionary<Vector3i, object>();
+        public static HashSet<ILockTarget> lockedList = new HashSet<ILockTarget>();
+
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -53,15 +54,58 @@ namespace QuickStorage
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
-        [HarmonyPatch(typeof(ConnectionManager), nameof(ConnectionManager.SendPackage), new Type[] { typeof(NetPackage),typeof(bool),typeof(int),typeof(int),typeof(int),typeof(Vector3?),typeof(int),typeof(bool) })]
+        [HarmonyPatch(typeof(ConnectionManager), nameof(ConnectionManager.SendPackage), new Type[] { typeof(NetPackage), typeof(bool), typeof(int), typeof(int), typeof(int), typeof(Vector3?), typeof(int), typeof(bool) })]
         public static class ConnectionManager_SendPackage_Patch
         {
             public static void Postfix(ConnectionManager __instance, NetPackage _package, bool _onlyClientsAttachedToAnEntity)
             {
-                if (!config.modEnabled || !__instance.IsServer || !(_package is NetPackageLockResponse response) || !response.success)
+                if (!config.modEnabled || !__instance.IsServer || !(_package is NetPackageLockTarget package))
                     return;
+                using (PooledBinaryReader pooledBinaryReader = MemoryPools.poolBinaryReader.AllocSync(false))
+                {
+                    PooledExpandableMemoryStream pooledExpandableMemoryStream1 = package.payload;
+                    lock (pooledExpandableMemoryStream1)
+                    {
+                        pooledBinaryReader.SetBaseStream(package.payload);
+                        package.payload.Position = 0L;
+                        bool locking = pooledBinaryReader.ReadBoolean();
+                        bool success = pooledBinaryReader.ReadBoolean();
+                        if(!success)
+                            return;
+                        string error = pooledBinaryReader.ReadString();
+                        ushort channel = pooledBinaryReader.ReadUInt16();
+                        int length = pooledBinaryReader.ReadInt32();
+                        ILockTarget[] array = new ILockTarget[length];
+                        for (int i = 0; i < length; i++)
+                        {
+                            array[i] = WorldAddress.Read(pooledBinaryReader).Resolve<ILockTarget>();
+                        }
+                        package.payload.Position = 0L;
 
-                SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(response.targets, !response.locking), false, -1, -1, -1, null, 192, false);
+                        PooledExpandableMemoryStream pooledExpandableMemoryStream = MemoryPools.poolMemoryStream.AllocSync(true);
+                        try
+                        {
+                            using (PooledBinaryWriter pooledBinaryWriter = MemoryPools.poolBinaryWriter.AllocSync(false))
+                            {
+                                pooledBinaryWriter.SetBaseStream(pooledExpandableMemoryStream);
+                                pooledBinaryWriter.Write(locking);
+                                pooledBinaryWriter.Write(length);
+                                for (int m = 0; m < array.Length; m++)
+                                {
+                                    WorldAddress.Create(array[m]).Write(pooledBinaryWriter);
+                                }
+                            }
+
+                            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(pooledExpandableMemoryStream));
+                        }
+                        finally
+                        {
+                            MemoryPools.poolMemoryStream.FreeSync(pooledExpandableMemoryStream);
+                        }
+
+                    }
+                }
+
             }
         }
 
@@ -142,11 +186,11 @@ namespace QuickStorage
                     var entity = (tileEntity as TileEntityComposite);
                     if (entity != null)
                     {
-                        var lootable = entity.GetFeature<ITileEntityLootable>();
-                        if (lootable != null && lootable.bPlayerStorage && !lockedList.Contains(lootable))
+                        var lootable = entity.GetFeature<TEFeatureStorage>();
+                        if (lootable != null && lootable.ItemGrid.PlayerOwned)
                         {
                             var lockable = entity.GetFeature<ILockable>();
-                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier) && !lockedList.Contains(lootable))
                             {
                                 if (!entity.IsUserAccessing())
                                 {
@@ -186,7 +230,7 @@ namespace QuickStorage
                 Dbgl($"Player bag is null");
                 return;
             }
-            ItemStack[] slots = bag.GetSlots();
+            ItemStack[] slots = bag.ItemGrid.items;
             for (int i = config.skipSlots; i < slots.Length; i++)
             {
                 if (slots[i] == null || slots[i].IsEmpty() || (bag.LockedSlots?.Length > i && bag.LockedSlots[i]))
@@ -212,10 +256,10 @@ namespace QuickStorage
                 {
                     if (!storageDict.TryGetValue(v, out var obj))
                         continue;
-                    if(obj is ITileEntityLootable tel && tel.items != null)
+                    if(obj is TEFeatureStorage tel && tel.ItemGrid.items != null)
                     {
 
-                        if (Array.Exists(tel.items, s => s.itemValue.type == initItem.itemValue.type))
+                        if (Array.Exists(tel.ItemGrid.items, s => s.itemValue.type == initItem.itemValue.type))
                         {
                             tel.TryStackItem(0, slots[i]);
                             if (slots[i].count > 0)
@@ -339,8 +383,8 @@ namespace QuickStorage
                     var entity = (tileEntity as TileEntityComposite);
                     if (entity != null)
                     {
-                        var lootable = entity.GetFeature<ITileEntityLootable>();
-                        if (lootable != null && lootable.bPlayerStorage)
+                        var lootable = entity.GetFeature<TEFeatureStorage>();
+                        if (lootable != null && lootable.ItemGrid.PlayerOwned)
                         {
                             var lockable = entity.GetFeature<ILockable>();
                             if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
@@ -370,10 +414,10 @@ namespace QuickStorage
             
             Dictionary<int, int> dict = new Dictionary<int, int>();
             var bag = world.GetPrimaryPlayer().bag;
-            var slots = bag.GetSlots();
+            var slots = bag.ItemGrid.items;
             var toolbelt = world.GetPrimaryPlayer().inventory;
-            var tslots = toolbelt.GetSlots();
-            
+            var tslots = toolbelt.ItemGrid.items;
+
             for (int i = 0; i < slots.Length + tslots.Length; i++)
             {
                 int idx = i;
@@ -403,23 +447,23 @@ namespace QuickStorage
                 }
                 foreach (var v in storageList)
                 {
-                    if (storageDict[v] is ITileEntityLootable tel)
+                    if (storageDict[v] is TEFeatureStorage tel)
                     {
 
-                        for (int j = tel.items.Length - 1; j >= 0; j--)
+                        for (int j = tel.ItemGrid.items.Length - 1; j >= 0; j--)
                         {
-                            if (tel.HasSlotLocksSupport && tel.SlotLocks.length > j && tel.SlotLocks[j])
+                            if (tel.ItemGrid.SlotLocks != null && tel.ItemGrid.SlotLocks.length > j && tel.ItemGrid.SlotLocks[j])
                                 continue;
 
-                            var item = tel.items[j];
+                            var item = tel.ItemGrid.items[j];
                             if (item.IsEmpty())
                                 continue;
 
-                            var initItem = tel.items[j].Clone();
-                            int num = tel.items[j].count;
-                            if (tel.items[j].itemValue.type == slot.itemValue.type && slot.CanStackPartly(ref num))
+                            var initItem = tel.ItemGrid.items[j].Clone();
+                            int num = tel.ItemGrid.items[j].count;
+                            if (tel.ItemGrid.items[j].itemValue.type == slot.itemValue.type && slot.CanStackPartly(ref num))
                             {
-                                tel.items[j].count -= num;
+                                tel.ItemGrid.items[j].count -= num;
                                 if (i < slots.Length)
                                 {
                                     slots[idx].count += num;
@@ -428,10 +472,10 @@ namespace QuickStorage
                                 else
                                 {
                                     tslots[idx].count += num;
-                                    toolbelt.onInventoryChanged();
+                                    toolbelt.CallOnToolbeltChangedInternal();
                                 }
                                 tel.SetModified();
-                                int moved = initItem.count - tel.items[j].count;
+                                int moved = initItem.count - tel.ItemGrid.items[j].count;
                                 if (dict.ContainsKey(initItem.itemValue.type))
                                 {
                                     dict[initItem.itemValue.type] += moved;
