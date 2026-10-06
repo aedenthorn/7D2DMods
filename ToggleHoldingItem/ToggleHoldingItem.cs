@@ -4,9 +4,10 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
+using static Hand;
 using Path = System.IO.Path;
 
-namespace AdvancedCompassMarkers
+namespace ToggleHoldingItem
 {
     public class ToggleHoldingItem : IModApi
     {
@@ -15,7 +16,6 @@ namespace AdvancedCompassMarkers
         public static ToggleHoldingItem context;
         public static Mod mod;
         public static bool hidingItem;
-        private static int holdingModelIndex;
         public void InitMod(Mod modInstance)
         {
             context = this;
@@ -79,61 +79,39 @@ namespace AdvancedCompassMarkers
             {
                 var inv = GameManager.Instance.World.GetPrimaryPlayer().inventory;
                 hidingItem = !hidingItem;
-                int idx = inv.holdingItemIdx;
                 if (hidingItem)
                 {
-                    holdingModelIndex = idx;
-                    inv.Hand.Held.heldModel.Instance.SetActive(false);
+                    inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(false);
                 }
                 else
                 {
-                    inv.Hand.Held.heldModel.Instance.SetActive(true);
+                    inv.Hand.slotDatas[inv.Hand.toolbelt.SelectedSlot]?.heldModel.Instance?.SetActive(true);
                 }
             }
         }
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemItemValue))]
-        [HarmonyPatch(MethodType.Getter)]
-        public static class Inventory_holdingItemItemValue_Patch
+        [HarmonyPatch(typeof(EntityPlayerLocal), nameof(EntityPlayerLocal.OnHoldingItemChanged))]
+        public static class EntityPlayerLocal_OnHoldingItemChanged_Patch
         {
 
-            public static bool Prefix(Inventory __instance, ref ItemValue __result)
+            public static void Prefix(EntityPlayerLocal __instance)
             {
-                if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
-                    return true;
-                __result = __instance.Hand.BareHandItemValue;
-                return false;
-            }
-        }
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItem))]
-        [HarmonyPatch(MethodType.Getter)]
-        public static class Inventory_holdingItem_Patch
-        {
-
-            public static bool Prefix(Inventory __instance, ref ItemClass __result)
-            {
-                if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
-                    return true;
-                __result = __instance.Hand.BareHandItem;
-                for (int i = 0; i < __result.Actions.Length; i++)
+                if (hidingItem)
                 {
-                    if (__result.Actions[i] is ItemActionDynamicMelee)
-                    {
-                        (__result.Actions[i] as ItemActionDynamicMelee).RangeDefault = 2;
-                    }
+                    __instance.inventory.Hand.Held.heldModel.Instance.SetActive(true);
+                    hidingItem = false;
                 }
-                return false;
             }
         }
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.holdingItemData))]
+        [HarmonyPatch(typeof(Hand), nameof(Hand.Held))]
         [HarmonyPatch(MethodType.Getter)]
-        public static class Inventory_holdingItemData_Patch
+        public static class Hand_Held_Patch
         {
 
-            public static bool Prefix(Inventory __instance, ref ItemInventoryData __result)
+            public static bool Prefix(Hand __instance, ref ItemInventoryData __result)
             {
-                if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal))
+                if (!config.modEnabled || !hidingItem || !(__instance.entity is EntityPlayerLocal) || __instance.slotDatas[__instance.toolbelt.SelectedSlot] == null)
                     return true;
-                __result = __instance.Hand.bareHandData;
+                __result = __instance.bareHandData;
                 for (int i = 0; i < __result.item.Actions.Length; i++)
                 {
                     if (__result.item.Actions[i] is ItemActionDynamicMelee)

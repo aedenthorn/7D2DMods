@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace TransferToForge
+namespace CustomPosters
 {
 
     public class CoroutineTask<T> : IEnumerator
