@@ -69,10 +69,6 @@ namespace QuickStorage
                         pooledBinaryReader.SetBaseStream(package.payload);
                         package.payload.Position = 0L;
                         bool locking = pooledBinaryReader.ReadBoolean();
-                        bool success = pooledBinaryReader.ReadBoolean();
-                        if(!success)
-                            return;
-                        string error = pooledBinaryReader.ReadString();
                         ushort channel = pooledBinaryReader.ReadUInt16();
                         int length = pooledBinaryReader.ReadInt32();
                         ILockTarget[] array = new ILockTarget[length];
