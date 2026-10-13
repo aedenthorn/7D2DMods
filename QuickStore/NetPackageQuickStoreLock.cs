@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 namespace QuickStorage
 {
@@ -28,7 +30,7 @@ namespace QuickStorage
 
         public override void ProcessPackage(World _world, GameManager _callbacks)
         {
-            if (!QuickStorage.config.modEnabled || SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
+            if (!QuickStorage.config.modEnabled)
                 return;
 
             using (PooledBinaryReader pooledBinaryReader = MemoryPools.poolBinaryReader.AllocSync(false))
@@ -39,31 +41,42 @@ namespace QuickStorage
                     pooledBinaryReader.SetBaseStream(this.payload);
                     this.payload.Position = 0L;
                     var locking = pooledBinaryReader.ReadBoolean();
-                    ushort channel = pooledBinaryReader.ReadUInt16();
-                    int length = pooledBinaryReader.ReadInt32();
-                    if (length < 1 || length > 5)
-                        return;
-                    ILockTarget[] targets = new ILockTarget[length];
-                    for (int i = 0; i < length; i++)
-                    {
-                        targets[i] = WorldAddress.Read(pooledBinaryReader).Resolve<ILockTarget>();
-                    }
+                    int id = pooledBinaryReader.ReadInt32();
                     if (locking)
                     {
                         QuickStorage.Dbgl($"received locked message");
+                        int length = pooledBinaryReader.ReadInt32();
+                        if (length < 1 || length > 5)
+                            return;
+                        ILockTarget[] targets = new ILockTarget[length];
+                        for (int i = 0; i < length; i++)
+                        {
+                            targets[i] = WorldAddress.Read(pooledBinaryReader).Resolve<ILockTarget>();
+                        }
+                        if (!QuickStorage.lockedDict.ContainsKey(id))
+                        {
+                            QuickStorage.lockedDict[id] = new HashSet<ILockTarget>();
+                        }
                         foreach (var target in targets)
                         {
                             if (target != null)
+                            {
                                 QuickStorage.lockedList.Add(target);
+                                QuickStorage.lockedDict[id].Add(target);
+                            }
+                            
                         }
                     }
                     else
                     {
                         QuickStorage.Dbgl($"received unlocked message");
-                        foreach (var target in targets)
+                        if(QuickStorage.lockedDict.TryGetValue(id, out var targetsSet))
                         {
-                            if (target != null)
+                            foreach (var target in targetsSet)
+                            {
                                 QuickStorage.lockedList.Remove(target);
+                            }
+                            QuickStorage.lockedDict.Remove(id);
                         }
                     }
                 }

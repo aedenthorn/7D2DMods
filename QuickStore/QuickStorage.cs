@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using Webserver.WebAPI.APIs.WorldState;
-using static AIDirectorPlayerInventory;
 using Path = System.IO.Path;
 
 namespace QuickStorage
@@ -21,7 +19,8 @@ namespace QuickStorage
         public static Mod mod;
         public static List<Vector3i> storageList = new List<Vector3i>();
         public static Dictionary<Vector3i, object> storageDict = new Dictionary<Vector3i, object>();
-        public static HashSet<ILockTarget> lockedList = new HashSet<ILockTarget>();
+        public static List<ILockTarget> lockedList = new List<ILockTarget>();
+        public static Dictionary<int, HashSet<ILockTarget>> lockedDict = new Dictionary<int, HashSet<ILockTarget>>();
 
         public void InitMod(Mod modInstance)
         {
@@ -54,21 +53,25 @@ namespace QuickStorage
                 Debug.Log((prefix ? mod.Name + " " : "") + str);
         }
 
-        [HarmonyPatch(typeof(ConnectionManager), nameof(ConnectionManager.SendPackage), new Type[] { typeof(NetPackage), typeof(bool), typeof(int), typeof(int), typeof(int), typeof(Vector3?), typeof(int), typeof(bool) })]
-        public static class ConnectionManager_SendPackage_Patch
+        [HarmonyPatch(typeof(LockManager), nameof(LockManager.DispatchResponse))]
+        public static class LockManager_LockRequestServer_Patch
         {
-            public static void Postfix(ConnectionManager __instance, NetPackage _package, bool _onlyClientsAttachedToAnEntity)
+            public static void Postfix(LockManager __instance, PooledExpandableMemoryStream _response, int _playerId)
             {
-                if (!config.modEnabled || !__instance.IsServer || !(_package is NetPackageLockTarget package))
+                if (!config.modEnabled)
                     return;
                 using (PooledBinaryReader pooledBinaryReader = MemoryPools.poolBinaryReader.AllocSync(false))
                 {
-                    PooledExpandableMemoryStream pooledExpandableMemoryStream1 = package.payload;
-                    lock (pooledExpandableMemoryStream1)
+
+                    pooledBinaryReader.SetBaseStream(_response);
+                    _response.Position = 0L;
+                    bool locking = pooledBinaryReader.ReadBoolean();
+                    bool success = pooledBinaryReader.ReadBoolean();
+                    if (!success)
+                        return;
+                    if (locking)
                     {
-                        pooledBinaryReader.SetBaseStream(package.payload);
-                        package.payload.Position = 0L;
-                        bool locking = pooledBinaryReader.ReadBoolean();
+                        string text = pooledBinaryReader.ReadString();
                         ushort channel = pooledBinaryReader.ReadUInt16();
                         int length = pooledBinaryReader.ReadInt32();
                         ILockTarget[] array = new ILockTarget[length];
@@ -76,7 +79,7 @@ namespace QuickStorage
                         {
                             array[i] = WorldAddress.Read(pooledBinaryReader).Resolve<ILockTarget>();
                         }
-                        package.payload.Position = 0L;
+                        Dbgl($"Dispatching lock response: locking={locking}, length={length}");
 
                         PooledExpandableMemoryStream pooledExpandableMemoryStream = MemoryPools.poolMemoryStream.AllocSync(true);
                         try
@@ -85,6 +88,7 @@ namespace QuickStorage
                             {
                                 pooledBinaryWriter.SetBaseStream(pooledExpandableMemoryStream);
                                 pooledBinaryWriter.Write(locking);
+                                pooledBinaryWriter.Write(_playerId);
                                 pooledBinaryWriter.Write(length);
                                 for (int m = 0; m < array.Length; m++)
                                 {
@@ -98,7 +102,28 @@ namespace QuickStorage
                         {
                             MemoryPools.poolMemoryStream.FreeSync(pooledExpandableMemoryStream);
                         }
+                    }
+                    else
+                    {
 
+                        Dbgl($"Dispatching unlock response");
+
+                        PooledExpandableMemoryStream pooledExpandableMemoryStream = MemoryPools.poolMemoryStream.AllocSync(true);
+                        try
+                        {
+                            using (PooledBinaryWriter pooledBinaryWriter = MemoryPools.poolBinaryWriter.AllocSync(false))
+                            {
+                                pooledBinaryWriter.SetBaseStream(pooledExpandableMemoryStream);
+                                pooledBinaryWriter.Write(locking);
+                                pooledBinaryWriter.Write(_playerId);
+                            }
+
+                            SingletonMonoBehaviour<ConnectionManager>.Instance.SendPackage(NetPackageManager.GetPackage<NetPackageQuickStoreLock>().Setup(pooledExpandableMemoryStream));
+                        }
+                        finally
+                        {
+                            MemoryPools.poolMemoryStream.FreeSync(pooledExpandableMemoryStream);
+                        }
                     }
                 }
 
@@ -183,10 +208,10 @@ namespace QuickStorage
                     if (entity != null)
                     {
                         var lootable = entity.GetFeature<TEFeatureStorage>();
-                        if (lootable != null && lootable.ItemGrid.PlayerOwned)
+                        if (lootable != null && lootable.ItemGrid.PlayerOwned && !lockedList.Contains(lootable))
                         {
                             var lockable = entity.GetFeature<ILockable>();
-                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier) && !lockedList.Contains(lootable))
+                            if (lockable == null || !lockable.IsLocked() || lockable.IsUserAllowed(PlatformManager.InternalLocalUserIdentifier))
                             {
                                 if (!entity.IsUserAccessing())
                                 {
